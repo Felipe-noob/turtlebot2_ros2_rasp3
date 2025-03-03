@@ -10,8 +10,8 @@ LABEL org.opencontainers.image.authors="proan@ingotrobotics.com"
 # RUN echo APT{Ignore {"gpg-pubkey"; }}; | sudo tee /etc/apt/apt.conf.d
 RUN apt-get update --allow-insecure-repositories
 RUN apt-get upgrade -y --allow-unauthenticated
-RUN apt-get install wget -y --no-install-recommends --allow-insecure-repositories
-RUN rm -rf /var/lib/apt/lists/* 
+RUN apt-get install wget -y --no-install-recommends --allow-unauthenticated
+RUN rm -rf /var/lib/apt/lists/*
 # Unchanged below here
 
 ARG robot_workspace
