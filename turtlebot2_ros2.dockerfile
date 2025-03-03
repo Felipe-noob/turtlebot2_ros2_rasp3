@@ -6,7 +6,13 @@ ARG robot_workspace="/root/robot"
 FROM $from_image AS kobuki_builder
 LABEL org.opencontainers.image.authors="proan@ingotrobotics.com"
 
-RUN apt-get update && apt-get upgrade -y && apt-get install wget -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
+# Changed
+# RUN echo APT{Ignore {"gpg-pubkey"; }}; | sudo tee /etc/apt/apt.conf.d
+RUN apt-get update --allow-insecure-repositories
+RUN apt-get upgrade -y --allow-unauthenticated
+RUN apt-get install wget -y --no-install-recommends --allow-insecure-repositories
+RUN rm -rf /var/lib/apt/lists/* 
+# Unchanged below here
 
 ARG robot_workspace
 ENV ROBOT_WORKSPACE=$robot_workspace
