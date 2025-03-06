@@ -102,3 +102,4 @@ RUN --mount=type=bind,source=.,target="$ROBOT_WORKSPACE/src",readonly \
 # `ros2 run kobuki_keyop kobuki_keyop_node`
 # or
 # `ros2 run teleop_twist_keyboard teleop_twist_keyboard`
+RUN echo 'source /root/robot/install/setup.bash' >> /root/.bashrc
