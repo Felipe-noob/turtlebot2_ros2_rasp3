@@ -34,6 +34,9 @@ If you will run rviz on a separate machine, adding `--network=host` is a docker 
 
 Inside the docker container, first source the overlay: `source install/setup.bash`, then launch the Turtlebot2 with `ros2 launch turtlebot2_bringup turtlebot2_bringup.launch.py`
 
+If you want a single command:
+`docker run -it --device=/dev/kobuki --device=/dev/ttyUSB0 -v /dev:/dev --device-cgroup-rule "c 81:* rmw" --device-cgroup-rule "c 189:* rmw" --net=host --ipc=host ingot/turtlebot2-ros-iron:desktop bash -c "source install/setup.bash; ros2 launch turtlebot2_bringup turtlebot2_bringup.launch.py"`
+
 ### Control
 
 The Turtlebot2 can be controlled by a separate instance of the same container. To run this instance, drop all of the `--device` switches from the `docker run` command above:
