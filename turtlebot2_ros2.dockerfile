@@ -103,3 +103,7 @@ RUN --mount=type=bind,source=.,target="$ROBOT_WORKSPACE/src",readonly \
 # or
 # `ros2 run teleop_twist_keyboard teleop_twist_keyboard`
 RUN echo 'source /root/robot/install/setup.bash' >> /root/.bashrc
+
+# Install Kinect drivers
+RUN apt-get update && apt-get install freenect
+
