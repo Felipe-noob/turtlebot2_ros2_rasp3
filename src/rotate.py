@@ -7,45 +7,6 @@ import rclpy
 import termios
 import tty
 
-moveBindings = {
-    'i': (1, 0, 0, 0),
-    'o': (1, 0, 0, -1),
-    'j': (0, 0, 0, 1),
-    'l': (0, 0, 0, -1),
-    'u': (1, 0, 0, 1),
-    ',': (-1, 0, 0, 0),
-    '.': (-1, 0, 0, 1),
-    'm': (-1, 0, 0, -1),
-    'O': (1, -1, 0, 0),
-    'I': (1, 0, 0, 0),
-    'J': (0, 1, 0, 0),
-    'L': (0, -1, 0, 0),
-    'U': (1, 1, 0, 0),
-    '<': (-1, 0, 0, 0),
-    '>': (-1, -1, 0, 0),
-    'M': (-1, 1, 0, 0),
-    't': (0, 0, 1, 0),
-    'b': (0, 0, -1, 0),
-}
-
-speedBindings = {
-    'q': (1.1, 1.1),
-    'z': (.9, .9),
-    'w': (1.1, 1),
-    'x': (.9, 1),
-    'e': (1, 1.1),
-    'c': (1, .9),
-}
-
-
-def getKey(settings):
-    tty.setraw(sys.stdin.fileno())
-    # sys.stdin.read() returns a string on Linux
-    key = sys.stdin.read(1)
-    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
-    return key
-
-
 def saveTerminalSettings():
     return termios.tcgetattr(sys.stdin)
 
@@ -99,7 +60,6 @@ def main():
         twist = twist_msg
 
     try:
-        print(msg)
         print(vels(speed, turn))
         while True:
             if stamped:
