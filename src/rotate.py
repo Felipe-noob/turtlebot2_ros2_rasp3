@@ -1,5 +1,6 @@
 import sys
 import threading
+import time
 
 import geometry_msgs.msg
 import rclpy
@@ -47,8 +48,9 @@ def main():
     x = 0.0
     y = 0.0
     z = 0.0
-    th = 0.0
+    th = 1.0
     status = 0.0
+    i = 0
 
     twist_msg = TwistMsg()
 
@@ -60,8 +62,8 @@ def main():
         twist = twist_msg
 
     try:
-        print(vels(speed, turn))
         while True:
+            i = i +1
             if stamped:
                 twist_msg.header.stamp = node.get_clock().now().to_msg()
 
@@ -70,7 +72,19 @@ def main():
             twist.linear.z = z * speed
             twist.angular.x = 0.0
             twist.angular.y = 0.0
-            twist.angular.z = th * turn
+            if i < 500:
+              twist.angular.z = th * turn
+            elif i < 520:
+              twist.angular.z = 0.0
+            elif i < 1000:
+              twist.angular.z = -th * turn
+            elif i < 1020:
+              twist.angular.z = 0.0
+            else:
+              i = 0
+
+            time.sleep(0.01)
+            print(vels(speed, twist.angular.z))
             pub.publish(twist_msg)
 
     except Exception as e:
