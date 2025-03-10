@@ -1,0 +1,9 @@
+msg/Pose goal_pose
+---
+std_msgs/Header header
+msg/Pose final_pose
+---
+std_msgs/Header header
+msg/Pose current_pose
+msg/Pose intermediate_goal_pose
+
