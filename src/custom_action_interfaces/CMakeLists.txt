@@ -25,8 +25,13 @@ endif()
 
 find_package(rosidl_default_generators REQUIRED)
 
-rosidl_generate_interfaces(${PROJECT_NAME}
+set(action_files
+  "action/UsineGoalPose.action"
   "action/Fibonacci.action"
+)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${action_files}
 )
 
 ament_package()
