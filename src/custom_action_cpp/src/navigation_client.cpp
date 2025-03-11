@@ -11,12 +11,12 @@
 #include "rclcpp_components/register_node_macro.hpp"
 
 namespace custom_action_cpp {
-class FibonacciActionClient : public rclcpp::Node {
+class NavigationActionClient : public rclcpp::Node {
 public:
   using Fibonacci = custom_action_interfaces::action::Fibonacci;
   using GoalHandleFibonacci = rclcpp_action::ClientGoalHandle<Fibonacci>;
 
-  explicit FibonacciActionClient(const rclcpp::NodeOptions &options)
+  explicit NavigationActionClient(const rclcpp::NodeOptions &options)
       : Node("fibonacci_action_client", options) {
     this->client_ptr_ =
         rclcpp_action::create_client<Fibonacci>(this, "fibonacci");
@@ -94,8 +94,8 @@ public:
 private:
   rclcpp_action::Client<Fibonacci>::SharedPtr client_ptr_;
   rclcpp::TimerBase::SharedPtr timer_;
-}; // class FibonacciActionClient
+}; // class NavigationActionClient
 
 } // namespace custom_action_cpp
 
-RCLCPP_COMPONENTS_REGISTER_NODE(custom_action_cpp::FibonacciActionClient)
+RCLCPP_COMPONENTS_REGISTER_NODE(custom_action_cpp::NavigationActionClient)
