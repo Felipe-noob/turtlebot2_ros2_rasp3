@@ -12,6 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
 
+# SERVER
 add_library(action_server SHARED
   src/navigation_server.cpp)
 target_include_directories(action_server PRIVATE
@@ -31,6 +32,7 @@ install(TARGETS
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
 
+# CLIENT
 add_library(action_client SHARED
   src/navigation_client.cpp)
 target_include_directories(action_client PRIVATE
@@ -43,13 +45,14 @@ ament_target_dependencies(action_client
   "rclcpp"
   "rclcpp_action"
   "rclcpp_components")
-rclcpp_components_register_node(action_client PLUGIN "custom_action_cpp::FibonacciActionClient" EXECUTABLE navigation_action_client)
+rclcpp_components_register_node(action_client PLUGIN "custom_action_cpp::NavigationActionClient" EXECUTABLE navigation_client)
 install(TARGETS
   action_client
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
 
+# ENDCLIENT
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

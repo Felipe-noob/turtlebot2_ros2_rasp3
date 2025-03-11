@@ -4,7 +4,7 @@
 #include <sstream>
 #include <string>
 
-#include "custom_action_interfaces/action/fibonacci.hpp"
+#include "custom_action_interfaces/action/usine_goal_pose.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -13,13 +13,13 @@
 namespace custom_action_cpp {
 class NavigationActionClient : public rclcpp::Node {
 public:
-  using Fibonacci = custom_action_interfaces::action::Fibonacci;
-  using GoalHandleNavigation = rclcpp_action::ClientGoalHandle<Fibonacci>;
+  using UsineGoalPose = custom_action_interfaces::action::UsineGoalPose;
+  using GoalHandleNavigation = rclcpp_action::ClientGoalHandle<UsineGoalPose>;
 
   explicit NavigationActionClient(const rclcpp::NodeOptions &options)
       : Node("navigation_action_client", options) {
     this->client_ptr_ =
-        rclcpp_action::create_client<Fibonacci>(this, "navigation");
+        rclcpp_action::create_client<UsineGoalPose>(this, "navigation");
 
     auto timer_callback_lambda = [this]() { return this->send_goal(); };
     this->timer_ = this->create_wall_timer(std::chrono::milliseconds(500),
@@ -37,13 +37,15 @@ public:
       rclcpp::shutdown();
     }
 
-    auto goal_msg = Fibonacci::Goal();
-    goal_msg.order = 10;
+    auto goal_msg = UsineGoalPose::Goal();
+    goal_msg.x_goal_pose = 10;
+    goal_msg.y_goal_pose = 10;
+    goal_msg.theta_goal_pose = 10;
 
     RCLCPP_INFO(this->get_logger(), "Sending goal");
 
     auto send_goal_options =
-        rclcpp_action::Client<Fibonacci>::SendGoalOptions();
+        rclcpp_action::Client<UsineGoalPose>::SendGoalOptions();
     send_goal_options.goal_response_callback =
         [this](const GoalHandleNavigation::SharedPtr &goal_handle) {
           if (!goal_handle) {
@@ -56,12 +58,10 @@ public:
 
     send_goal_options.feedback_callback =
         [this](GoalHandleNavigation::SharedPtr,
-               const std::shared_ptr<const Fibonacci::Feedback> feedback) {
+               const std::shared_ptr<const UsineGoalPose::Feedback> feedback) {
           std::stringstream ss;
           ss << "Next number in sequence received: ";
-          for (auto number : feedback->partial_sequence) {
-            ss << number << " ";
-          }
+          ss << feedback->x_current_pose << " ";
           RCLCPP_INFO(this->get_logger(), ss.str().c_str());
         };
 
@@ -82,9 +82,7 @@ public:
           }
           std::stringstream ss;
           ss << "Result received: ";
-          for (auto number : result.result->sequence) {
-            ss << number << " ";
-          }
+          ss << result.result->x_final_pose << " ";
           RCLCPP_INFO(this->get_logger(), ss.str().c_str());
           rclcpp::shutdown();
         };
@@ -92,7 +90,7 @@ public:
   }
 
 private:
-  rclcpp_action::Client<Fibonacci>::SharedPtr client_ptr_;
+  rclcpp_action::Client<UsineGoalPose>::SharedPtr client_ptr_;
   rclcpp::TimerBase::SharedPtr timer_;
 }; // class NavigationActionClient
 
