@@ -20,7 +20,7 @@ class MinimalSubscriber : public rclcpp::Node
     : Node("minimal_subscriber")
     {
       subscription_ = this->create_subscription<rcl_interfaces::msg::Log>(
-      "rosout", 10, std::bind(&MinimalSubscriber::topic_callback, this, _1));
+      "myrosout", 10, std::bind(&MinimalSubscriber::topic_callback, this, _1));
       RCLCPP_INFO(this->get_logger(), "Listener on topic /topic");
 
     }
@@ -76,6 +76,8 @@ public:
 
     this->action_server_ = rclcpp_action::create_server<UsineGoalPose>(
         this, "navigation", handle_goal, handle_cancel, handle_accepted);
+
+    rclcpp::spin(std::make_shared<MinimalSubscriber>());
   }
 
 private:
