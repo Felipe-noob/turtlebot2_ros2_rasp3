@@ -27,7 +27,7 @@ struct Generation_Trajectoire{
 
 class Trajectory_Block{
     public:
-
+/*
         float t;
         float t0;
         float tf;
@@ -35,7 +35,7 @@ class Trajectory_Block{
         float vf;
         float acc0;
         float accf;
-        
+ */       
         void Generation_Trajectoire_update(struct Generation_Trajectoire &bloque, float time_current){
 
             static float a[4];
@@ -89,13 +89,6 @@ int main(int argv, char *argc []){
         block1.Generation_Trajectoire_update(struct1,t_current);
         std::cout << struct1.q << '\n';
     }
-
-/*
-    block1.Generation_Trajectoire_update(struct1,t_current);
-        
-    std::cout << struct1.q << '\n';
-*/
-   // block1.Generation_Trajectoire_update();
 
     return 0;
 }
