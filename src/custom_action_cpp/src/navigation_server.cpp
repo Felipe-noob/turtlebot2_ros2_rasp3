@@ -3,7 +3,6 @@
 #include <thread>
 
 #include "custom_action_interfaces/action/usine_goal_pose.hpp"
-#include "custom_action_interfaces/action/fibonacci.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
@@ -24,8 +23,11 @@ public:
 
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
                               std::shared_ptr<const UsineGoalPose::Goal> goal) {
-      RCLCPP_INFO(this->get_logger(), "Received goal request with order %f",
-                  goal->x_goal_pose );
+      RCLCPP_INFO(this->get_logger(), "Received goal request with order [%f, %f, %f]",
+                  goal->x_goal_pose,
+                  goal->y_goal_pose,
+                  goal->theta_goal_pose
+                  );
       (void)uuid;
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     };
