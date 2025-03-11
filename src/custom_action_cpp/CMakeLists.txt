@@ -13,7 +13,7 @@ find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
 
 add_library(action_server SHARED
-  src/fibonacci_action_server.cpp)
+  src/navigation_server.cpp)
 target_include_directories(action_server PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -24,7 +24,7 @@ ament_target_dependencies(action_server
   "rclcpp"
   "rclcpp_action"
   "rclcpp_components")
-rclcpp_components_register_node(action_server PLUGIN "custom_action_cpp::FibonacciActionServer" EXECUTABLE fibonacci_action_server)
+rclcpp_components_register_node(action_server PLUGIN "custom_action_cpp::NavigationActionServer" EXECUTABLE navigation_server)
 install(TARGETS
   action_server
   ARCHIVE DESTINATION lib
