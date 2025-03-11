@@ -11,28 +11,6 @@
 #include "std_msgs/msg/string.hpp"
 #include "rcl_interfaces/msg/log.hpp"
 
-using std::placeholders::_1;
-
-class MinimalSubscriber : public rclcpp::Node
-{
-  public:
-    MinimalSubscriber()
-    : Node("minimal_subscriber")
-    {
-      subscription_ = this->create_subscription<rcl_interfaces::msg::Log>(
-      "myrosout", 10, std::bind(&MinimalSubscriber::topic_callback, this, _1));
-      RCLCPP_INFO(this->get_logger(), "Listener on topic /topic");
-
-    }
-
-  private:
-    void topic_callback(const rcl_interfaces::msg::Log::SharedPtr msg) const
-    {
-      RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->name.c_str());
-    }
-    rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr subscription_;
-};
-
 namespace custom_action_cpp {
 class NavigationActionServer : public rclcpp::Node {
 public:
@@ -40,13 +18,15 @@ public:
   using GoalHandleUsineGoalPose =
       rclcpp_action::ServerGoalHandle<UsineGoalPose>;
 
-  MinimalSubscriber subscriber = MinimalSubscriber();
-
   CUSTOM_ACTION_CPP_PUBLIC
   explicit NavigationActionServer(
       const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
       : Node("navigation_action_server", options) {
     using namespace std::placeholders;
+
+    subscription_ = this->create_subscription<rcl_interfaces::msg::Log>(
+      "myrosout", 10, std::bind(&NavigationActionServer::topic_callback, this, _1));
+      RCLCPP_INFO(this->get_logger(), "Listener on topic /topic");
 
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
                               std::shared_ptr<const UsineGoalPose::Goal> goal) {
@@ -77,10 +57,17 @@ public:
     this->action_server_ = rclcpp_action::create_server<UsineGoalPose>(
         this, "navigation", handle_goal, handle_cancel, handle_accepted);
 
-    rclcpp::spin(std::make_shared<MinimalSubscriber>());
+    // TODO Init listener thread here
+    // std::thread th1(listenerThread);
   }
 
 private:
+  void topic_callback(const rcl_interfaces::msg::Log::SharedPtr msg) const
+    {
+      RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->name.c_str());
+    }
+  rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr subscription_;
+
   rclcpp_action::Server<UsineGoalPose>::SharedPtr action_server_;
 
   void execute(const std::shared_ptr<GoalHandleUsineGoalPose> goal_handle) {
