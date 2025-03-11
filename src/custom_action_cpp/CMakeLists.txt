@@ -32,7 +32,7 @@ install(TARGETS
   RUNTIME DESTINATION bin)
 
 add_library(action_client SHARED
-  src/fibonacci_action_client.cpp)
+  src/navigation_client.cpp)
 target_include_directories(action_client PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
