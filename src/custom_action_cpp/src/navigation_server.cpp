@@ -63,16 +63,36 @@ private:
     auto feedback = std::make_shared<UsineGoalPose::Feedback>();
     auto result = std::make_shared<UsineGoalPose::Result>();
 
-    for (int i = 1; (i < 100) && rclcpp::ok(); ++i) {
+    // TODO: stop condition
+    // TODO: import command from Gabriel
+    for (int i = 1; (i < 10) && rclcpp::ok(); ++i) {
       // Check if there is a cancel request
       if (goal_handle->is_canceling()) {
         result->x_final_pose = 2002;
+        result->y_final_pose = 2002;
+        result->theta_final_pose = 2002;
         goal_handle->canceled(result);
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
         return;
       }
+      // TODO: read data from robot
       // Update sequence
-      // sequence.push_back(sequence[i] + sequence[i - 1]);
+      feedback->x_current_pose = 3;
+      feedback->y_current_pose = 3;
+      feedback->theta_current_pose = 3;
+      feedback->x_intermediate_goal_pose = 3;
+      feedback->y_intermediate_goal_pose = 3;
+      feedback->theta_intermediate_goal_pose = 3;
+      feedback->x_speed = 3;
+      feedback->y_speed = 3;
+      feedback->theta_speed = 3;
+      feedback->x_error_pose = 3;
+      feedback->y_error_pose = 3;
+      feedback->theta_error_pose = 3;
+      feedback->x_error_speed = 3;
+      feedback->y_error_speed = 3;
+      feedback->theta_error_speed = 3;
+
       // Publish feedback
       goal_handle->publish_feedback(feedback);
       RCLCPP_INFO(this->get_logger(), "Publish feedback");
@@ -83,6 +103,8 @@ private:
     // Check if goal is done
     if (rclcpp::ok()) {
       result->x_final_pose = 9;
+      result->y_final_pose = 9;
+      result->theta_final_pose = 9;
       goal_handle->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
     }
