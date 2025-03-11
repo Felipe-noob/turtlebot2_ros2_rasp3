@@ -11,6 +11,7 @@ find_package(custom_action_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # SERVER
 add_library(action_server SHARED
@@ -24,7 +25,8 @@ ament_target_dependencies(action_server
   "custom_action_interfaces"
   "rclcpp"
   "rclcpp_action"
-  "rclcpp_components")
+  "rclcpp_components"
+  "std_msgs")
 rclcpp_components_register_node(action_server PLUGIN "custom_action_cpp::NavigationActionServer" EXECUTABLE navigation_server)
 install(TARGETS
   action_server
