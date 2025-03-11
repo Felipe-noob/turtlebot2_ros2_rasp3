@@ -9,6 +9,7 @@
 
 #include "custom_action_cpp/visibility_control.h"
 #include "std_msgs/msg/string.hpp"
+#include "rcl_interfaces/msg/log.hpp"
 
 using std::placeholders::_1;
 
@@ -18,16 +19,18 @@ class MinimalSubscriber : public rclcpp::Node
     MinimalSubscriber()
     : Node("minimal_subscriber")
     {
-      subscription_ = this->create_subscription<std_msgs::msg::String>(
-      "topic", 10, std::bind(&MinimalSubscriber::topic_callback, this, _1));
+      subscription_ = this->create_subscription<rcl_interfaces::msg::Log>(
+      "rosout", 10, std::bind(&MinimalSubscriber::topic_callback, this, _1));
+      RCLCPP_INFO(this->get_logger(), "Listener on topic /topic");
+
     }
 
   private:
-    void topic_callback(const std_msgs::msg::String::SharedPtr msg) const
+    void topic_callback(const rcl_interfaces::msg::Log::SharedPtr msg) const
     {
-      RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
+      RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->name.c_str());
     }
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
+    rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr subscription_;
 };
 
 namespace custom_action_cpp {
@@ -36,6 +39,8 @@ public:
   using UsineGoalPose = custom_action_interfaces::action::UsineGoalPose;
   using GoalHandleUsineGoalPose =
       rclcpp_action::ServerGoalHandle<UsineGoalPose>;
+
+  MinimalSubscriber subscriber = MinimalSubscriber();
 
   CUSTOM_ACTION_CPP_PUBLIC
   explicit NavigationActionServer(
@@ -72,8 +77,6 @@ public:
     this->action_server_ = rclcpp_action::create_server<UsineGoalPose>(
         this, "navigation", handle_goal, handle_cancel, handle_accepted);
   }
-
-
 
 private:
   rclcpp_action::Server<UsineGoalPose>::SharedPtr action_server_;
