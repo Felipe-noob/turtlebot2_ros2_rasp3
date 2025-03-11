@@ -6,4 +6,6 @@ msg/Pose final_pose
 std_msgs/Header header
 msg/Pose current_pose
 msg/Pose intermediate_goal_pose
-
+msg/Pose speed
+msg/Pose error_pose
+msg/Pose error_speed
