@@ -44,7 +44,19 @@ struct RobotParamater{
     float R;        // Turtlebot base radius [m]
 };
 
-void Generation_Trajectoire_update(struct GenerationTrajectoireBlock &bloque, float time_current){
+struct SpeedConverterBlock{
+
+    // inputs
+    float v_rigth;  //  [m/s]
+    float v_left;   //  [m/s]
+    
+    // outputs
+    float v;        // [m/s]
+    float w;        // [rad/s]
+
+};
+
+void update_TrajectoryOutput(struct GenerationTrajectoireBlock &bloque, float time_current){
 
     static float a[4];
     float lambda;
@@ -68,7 +80,7 @@ void Generation_Trajectoire_update(struct GenerationTrajectoireBlock &bloque, fl
     }
 }
 
-void Reference_Change_update(struct ReferenceChangeBlock &bloque, struct RobotParamater &param){
+void update_CoordsHead(struct ReferenceChangeBlock &bloque, struct RobotParamater &param){
 
     bloque.x_head = bloque.x + param.R*cos(bloque.theta);
     bloque.y_head = bloque.y + param.R*sin(bloque.theta);
@@ -76,27 +88,44 @@ void Reference_Change_update(struct ReferenceChangeBlock &bloque, struct RobotPa
 
 }
 
+void convert_speed(struct SpeedConverterBlock &bloque, struct RobotParamater &param){
+
+    bloque.v = (bloque.v_rigth + bloque.v_left)/2;
+    bloque.w = (bloque.v_rigth - bloque.v_left)/(2*param.R);
+
+}
+
+float convert_degrees2radius(float degrees){
+   float radius;
+    return radius = (degrees*2*M_PI)*360; 
+}
+
 int main(int argv, char *argc []){
 
+    // Blocks definition
     struct GenerationTrajectoireBlock block_trajectory = {.p0 = 0, .pf = 10, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
-    struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 17/100};
     struct ReferenceChangeBlock reference_change_block = {.x = 0, .y = 0, .theta = 0, .x_head = 0, .y_head = 0, .theta_head = 0 };
+    struct SpeedConverterBlock speed_converter_block = {.v_rigth = 0, .v_left  = 0, .v = 0, .w = 0};
 
-   // float t_current = 1;
-
+    // Robot's structs
+    struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 0.17};
+  
     float i = 0;
     float t_current;
 
-    // Test Generation_Trajectoire_update
+    // Test update_TrajectoryOutput
+    std::cout << "Test update_TrajectoryOutput" << '\n';
 
     for(i = 0 ; i < 5 ; i = i+0.1){
 
         t_current = i;
-        Generation_Trajectoire_update(block_trajectory,t_current);
+        update_TrajectoryOutput(block_trajectory,t_current);
         std::cout << block_trajectory.q << '\n';
     }
 
-    // Test Reference_Change_update
+    // Test update_CoordsHead
+
+    std::cout << "Test update_CoordsHead" << '\n';
 
     for(i = 0 ; i < 5 ; i = i+0.1){
         reference_change_block.x = i;
@@ -106,9 +135,27 @@ int main(int argv, char *argc []){
             reference_change_block.theta += 0.5 ;
         }
 
-        Reference_Change_update(reference_change_block,robot_paramaters);
+        update_CoordsHead(reference_change_block,robot_paramaters);
         
         std::cout << reference_change_block.x_head << " , " << reference_change_block.y_head << " , " << reference_change_block.theta_head << '\n';
+    }
+
+    // Test convert_speed
+    
+    std::cout << "Test convert_speed" << '\n';
+
+      for(i = 0 ; i < 5 ; i = i+0.1){
+        speed_converter_block.v_rigth = 1;
+        speed_converter_block.v_left = 1;
+
+        if(i > 2) {
+            speed_converter_block.v_rigth = 1;
+            speed_converter_block.v_left = 2;
+        }
+
+        convert_speed(speed_converter_block,robot_paramaters);
+        
+        std::cout << speed_converter_block.v << " , " << speed_converter_block.w << '\n';
     }
 
     return 0;
