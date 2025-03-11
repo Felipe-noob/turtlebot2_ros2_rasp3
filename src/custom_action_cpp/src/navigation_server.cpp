@@ -13,7 +13,8 @@ namespace custom_action_cpp {
 class NavigationActionServer : public rclcpp::Node {
 public:
   using UsineGoalPose = custom_action_interfaces::action::UsineGoalPose;
-  using GoalHandleUsineGoalPose = rclcpp_action::ServerGoalHandle<UsineGoalPose>;
+  using GoalHandleUsineGoalPose =
+      rclcpp_action::ServerGoalHandle<UsineGoalPose>;
 
   CUSTOM_ACTION_CPP_PUBLIC
   explicit NavigationActionServer(
@@ -23,11 +24,9 @@ public:
 
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
                               std::shared_ptr<const UsineGoalPose::Goal> goal) {
-      RCLCPP_INFO(this->get_logger(), "Received goal request with order [%f, %f, %f]",
-                  goal->x_goal_pose,
-                  goal->y_goal_pose,
-                  goal->theta_goal_pose
-                  );
+      RCLCPP_INFO(this->get_logger(),
+                  "Received goal request with order [%f, %f, %f]",
+                  goal->x_goal_pose, goal->y_goal_pose, goal->theta_goal_pose);
       (void)uuid;
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     };
