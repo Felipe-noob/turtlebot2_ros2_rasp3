@@ -14,12 +14,12 @@ namespace custom_action_cpp {
 class NavigationActionClient : public rclcpp::Node {
 public:
   using Fibonacci = custom_action_interfaces::action::Fibonacci;
-  using GoalHandleFibonacci = rclcpp_action::ClientGoalHandle<Fibonacci>;
+  using GoalHandleNavigation = rclcpp_action::ClientGoalHandle<Fibonacci>;
 
   explicit NavigationActionClient(const rclcpp::NodeOptions &options)
-      : Node("fibonacci_action_client", options) {
+      : Node("navigation_action_client", options) {
     this->client_ptr_ =
-        rclcpp_action::create_client<Fibonacci>(this, "fibonacci");
+        rclcpp_action::create_client<Fibonacci>(this, "navigation");
 
     auto timer_callback_lambda = [this]() { return this->send_goal(); };
     this->timer_ = this->create_wall_timer(std::chrono::milliseconds(500),
@@ -45,7 +45,7 @@ public:
     auto send_goal_options =
         rclcpp_action::Client<Fibonacci>::SendGoalOptions();
     send_goal_options.goal_response_callback =
-        [this](const GoalHandleFibonacci::SharedPtr &goal_handle) {
+        [this](const GoalHandleNavigation::SharedPtr &goal_handle) {
           if (!goal_handle) {
             RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
           } else {
@@ -55,7 +55,7 @@ public:
         };
 
     send_goal_options.feedback_callback =
-        [this](GoalHandleFibonacci::SharedPtr,
+        [this](GoalHandleNavigation::SharedPtr,
                const std::shared_ptr<const Fibonacci::Feedback> feedback) {
           std::stringstream ss;
           ss << "Next number in sequence received: ";
@@ -66,7 +66,7 @@ public:
         };
 
     send_goal_options.result_callback =
-        [this](const GoalHandleFibonacci::WrappedResult &result) {
+        [this](const GoalHandleNavigation::WrappedResult &result) {
           switch (result.code) {
           case rclcpp_action::ResultCode::SUCCEEDED:
             break;

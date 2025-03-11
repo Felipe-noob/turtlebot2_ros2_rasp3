@@ -43,7 +43,7 @@ ament_target_dependencies(action_client
   "rclcpp"
   "rclcpp_action"
   "rclcpp_components")
-rclcpp_components_register_node(action_client PLUGIN "custom_action_cpp::FibonacciActionClient" EXECUTABLE fibonacci_action_client)
+rclcpp_components_register_node(action_client PLUGIN "custom_action_cpp::FibonacciActionClient" EXECUTABLE navigation_action_client)
 install(TARGETS
   action_client
   ARCHIVE DESTINATION lib
