@@ -7,12 +7,12 @@
 
 #include <math.h>
 
-// #include "rclcpp/rclcpp.hpp"
-// #include "geometry_msgs/msg/twist.hpp"
+//#include "rclcpp/rclcpp.hpp"
+//#include "geometry_msgs/msg/twist.hpp"
 
 using namespace std::chrono_literals;
 
-struct Generation_Trajectoire{
+struct GenerationTrajectoireBlock{
     //Inputs
     float p0;
     float pf;
@@ -26,7 +26,7 @@ struct Generation_Trajectoire{
     float dq;
   };
 
-struct Reference_Change_Block{
+struct ReferenceChangeBlock{
     //Inputs
     float x;        // [m]
     float y;        // [m]
@@ -38,13 +38,13 @@ struct Reference_Change_Block{
     float theta_head;    // [rad ?]
   };
 
-struct Robot_Paramater{
+struct RobotParamater{
     float Km;       // Static Gain [m*s*V]
     float tau;      // Time constant [s]
     float R;        // Turtlebot base radius [m]
 };
 
-void Generation_Trajectoire_update(struct Generation_Trajectoire &bloque, float time_current){
+void Generation_Trajectoire_update(struct GenerationTrajectoireBlock &bloque, float time_current){
 
     static float a[4];
     float lambda;
@@ -68,7 +68,7 @@ void Generation_Trajectoire_update(struct Generation_Trajectoire &bloque, float 
     }
 }
 
-void Reference_Change_update(struct Reference_Change_Block &bloque, struct Robot_Paramater &param){
+void Reference_Change_update(struct ReferenceChangeBlock &bloque, struct RobotParamater &param){
 
     bloque.x_head = bloque.x + param.R*cos(bloque.theta);
     bloque.y_head = bloque.y + param.R*sin(bloque.theta);
@@ -78,14 +78,16 @@ void Reference_Change_update(struct Reference_Change_Block &bloque, struct Robot
 
 int main(int argv, char *argc []){
 
-    struct Generation_Trajectoire block_trajectory = {.p0 = 0, .pf = 10, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
-    struct Robot_Paramater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 17/100};
-    struct Reference_Change_Block reference_change_block = {.x = 0, .y = 0, .theta = 0, .x_head = 0, .y_head = 0, .theta_head = 0 };
+    struct GenerationTrajectoireBlock block_trajectory = {.p0 = 0, .pf = 10, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
+    struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 17/100};
+    struct ReferenceChangeBlock reference_change_block = {.x = 0, .y = 0, .theta = 0, .x_head = 0, .y_head = 0, .theta_head = 0 };
 
    // float t_current = 1;
 
     float i = 0;
     float t_current;
+
+    // Test Generation_Trajectoire_update
 
     for(i = 0 ; i < 5 ; i = i+0.1){
 
@@ -94,7 +96,7 @@ int main(int argv, char *argc []){
         std::cout << block_trajectory.q << '\n';
     }
 
-
+    // Test Reference_Change_update
 
     for(i = 0 ; i < 5 ; i = i+0.1){
         reference_change_block.x = i;
