@@ -62,6 +62,21 @@ public:
           std::stringstream ss;
           ss << "Next number in sequence received: ";
           ss << feedback->x_current_pose << " ";
+          ss << feedback->y_current_pose << " ";
+          ss << feedback->theta_current_pose << " ";
+          ss << feedback->x_intermediate_goal_pose << " ";
+          ss << feedback->y_intermediate_goal_pose << " ";
+          ss << feedback->theta_intermediate_goal_pose << " ";
+          ss << feedback->x_speed << " ";
+          ss << feedback->y_speed << " ";
+          ss << feedback->theta_speed << " ";
+          ss << feedback->x_error_pose << " ";
+          ss << feedback->y_error_pose << " ";
+          ss << feedback->theta_error_pose << " ";
+          ss << feedback->x_error_speed << " ";
+          ss << feedback->y_error_speed << " ";
+          ss << feedback->theta_error_speed << " ";
+
           RCLCPP_INFO(this->get_logger(), ss.str().c_str());
         };
 
@@ -83,6 +98,8 @@ public:
           std::stringstream ss;
           ss << "Result received: ";
           ss << result.result->x_final_pose << " ";
+          ss << result.result->y_final_pose << " ";
+          ss << result.result->theta_final_pose << " ";
           RCLCPP_INFO(this->get_logger(), ss.str().c_str());
           rclcpp::shutdown();
         };
