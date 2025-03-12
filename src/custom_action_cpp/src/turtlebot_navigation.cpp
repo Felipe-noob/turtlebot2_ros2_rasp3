@@ -22,6 +22,8 @@ void add(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> req
  * TODO: call actual service, this is a mock
  */
 uint16_t get_turtle_id() {
+  return 3;
+  // TODO test if node already exists before trying to create it
   std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("add_two_ints_client");
   rclcpp::Client<example_interfaces::srv::AddTwoInts>::SharedPtr client =
     node->create_client<example_interfaces::srv::AddTwoInts>("add_two_ints");
@@ -61,12 +63,15 @@ int main(int argc, char **argv)
   const uint16_t turtle_id = get_turtle_id();
   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "turtle_id = %d", turtle_id);
 
-  std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("turtlebot_navigation_server");
+  std::string node_name = "turtlebot_navigation_server_" + std::to_string(turtle_id);
+  std::string service_name = "turtlebot_navigation_" + std::to_string(turtle_id);
+
+  std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared(node_name);
 
   rclcpp::Service<example_interfaces::srv::AddTwoInts>::SharedPtr service =
-    node->create_service<example_interfaces::srv::AddTwoInts>("turtlebot_navigation", &add);
+    node->create_service<example_interfaces::srv::AddTwoInts>("service_name", &add);
 
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Ready to add two ints.");
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Ready to perform a trajectory.");
 
   rclcpp::spin(node);
   rclcpp::shutdown();
