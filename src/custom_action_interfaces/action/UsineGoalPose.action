@@ -1,27 +1,27 @@
-float64 x_goal_pose
-float64 y_goal_pose
-float64 theta_goal_pose
+float32 x_goal_pose
+float32 y_goal_pose
+float32 theta_goal_pose
 ---
-float64 x_final_pose
-float64 y_final_pose
-float64 theta_final_pose
+float32 x_final_pose
+float32 y_final_pose
+float32 theta_final_pose
 ---
-float64 x_current_pose
-float64 y_current_pose
-float64 theta_current_pose
+float32 x_current_pose
+float32 y_current_pose
+float32 theta_current_pose
 
-float64 x_intermediate_goal_pose
-float64 y_intermediate_goal_pose
-float64 theta_intermediate_goal_pose
+float32 x_intermediate_goal_pose
+float32 y_intermediate_goal_pose
+float32 theta_intermediate_goal_pose
 
-float64 x_speed
-float64 y_speed
-float64 theta_speed
+float32 x_speed
+float32 y_speed
+float32 theta_speed
 
-float64 x_error_pose
-float64 y_error_pose
-float64 theta_error_pose
+float32 x_error_pose
+float32 y_error_pose
+float32 theta_error_pose
 
-float64 x_error_speed
-float64 y_error_speed
-float64 theta_error_speed
+float32 x_error_speed
+float32 y_error_speed
+float32 theta_error_speed
