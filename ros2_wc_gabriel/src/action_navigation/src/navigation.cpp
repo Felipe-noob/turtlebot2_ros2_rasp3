@@ -77,11 +77,12 @@ struct TurtlebotBlock{
     // input
     float v_turtle;
     float w_turtle;
+    float theta;
 
     //output
-    float x;
-    float y;
-    float theta;
+    float dx;
+    float dy;
+    float dtheta;
 };
 
 struct M_inverseBlock{
@@ -96,6 +97,62 @@ struct M_inverseBlock{
     float w_desired;
 
 };
+
+struct IntegratorBlock
+{
+    // input
+    float dx;
+    float dy;
+    float dtheta;
+
+    // initial_cond
+    float initial_x = 0;
+    float initial_y = 0;
+    float initial_theta = 0;
+
+    // output
+    float x;
+    float y;
+    float theta;
+};
+
+
+void calcule_integrator(struct IntegratorBlock &bloque, float dt){
+
+    static float somme_x = bloque.initial_x; 
+    static float somme_y = bloque.initial_y; 
+    static float somme_theta = bloque.initial_theta;
+    static bool firstCall = true;
+    static float last_dx = 0, last_dy = 0, last_dtheta = 0; 
+
+    if(firstCall){
+        last_dx = bloque.dx;
+        last_dy = bloque.dy;
+        last_dtheta = bloque.dtheta;
+        firstCall = false;
+    }
+
+    bloque.x = (bloque.dx + last_dx)*(dt/2.0f) + somme_x;
+    bloque.y = (bloque.dy + last_dy)*(dt/2.0f) + somme_y;
+    bloque.theta = (bloque.dtheta + last_dtheta)*(dt/2.0f) + somme_theta;
+
+    last_dx = bloque.dx;
+    last_dy = bloque.dy;
+    last_dtheta = bloque.dtheta;
+    
+    somme_x = bloque.x;
+    somme_y = bloque.y;
+    somme_theta = bloque.theta;
+    
+}
+
+void update_TurtlebotBlock(struct TurtlebotBlock &bloque){
+
+    bloque.dx = cos(bloque.theta) * bloque.v_turtle;
+    bloque.dy = sin(bloque.theta) * bloque.v_turtle;
+    bloque.dtheta = bloque.w_turtle;
+
+}
 
 void update_M_inverseBlock(struct M_inverseBlock &bloque,struct RobotParamater &param){
     
@@ -169,15 +226,18 @@ int main(int argv, char *argc []){
     struct SpeedConverterBlock speed_converter_block = {.v_rigth = 0, .v_left  = 0, .v = 0, .w = 0};
     struct GainSpeedBlock gain_speed_block = {.v_desired = 0, .w_desired = 0, .v_turtle = 0, .w_turtle = 0};
     struct M_inverseBlock inverse_matrix_block = {.ux = 0, .uy = 0, .theta = 0, .v_desired = 0, .w_desired = 0};
+    struct IntegratorBlock itegrator_block = {.dx = 0, .dy = 0, .dtheta = 0, .initial_x = 0, .initial_y = 0, .initial_theta = 0, .x = 0, .y = 0, .theta = 0 };
     
 
     // Robot's structs
     struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 0.17};
-    struct TurtlebotBlock turtlebot2 = {.v_turtle = 0, .w_turtle = 0, .x = 0, .y = 0, .theta = 0};
+    struct TurtlebotBlock turtlebot2 = {.v_turtle = 0, .w_turtle = 0, .theta = 0, .dx = 0, .dy = 0, .dtheta = 0};
   
     float i = 0;
     float t_current;
+    float delta = 0.01;
 
+    /*
     // Test update_TrajectoryOutput
     std::cout << "Test update_TrajectoryOutput" << '\n';
 
@@ -257,6 +317,30 @@ int main(int argv, char *argc []){
         
         std::cout << inverse_matrix_block.v_desired << " , " << inverse_matrix_block.w_desired << '\n';
     }
+
+    */
+    // Test M_inverseBlock
+
+    delta = 0.1;
+
+    std::cout << "Teste Integrator block" << '\n';
+    for(i = 0 ; i < 5 ; i = i + delta){
+
+        itegrator_block.dx = i;
+        itegrator_block.dy = i;
+        itegrator_block.dtheta = i;
+
+        itegrator_block.initial_x = 0;
+        itegrator_block.initial_y = 0;
+        itegrator_block.initial_theta = 0;
+
+          
+        calcule_integrator(itegrator_block,delta);
+
+        std::cout << itegrator_block.x << " , " << itegrator_block.y << " , " << itegrator_block.theta << '\n';
+
+    }
+
 
     return 0;
 }
