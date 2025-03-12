@@ -56,6 +56,29 @@ struct SpeedConverterBlock{
 
 };
 
+struct GainSpeedBlock{
+
+    // inputs
+    float v_desired;
+    float w_desired;
+
+    // Gains
+    float pre_gain_v = 1.25;    // == 1 / 0.8
+    float pre_gain_w = 1.11;    // == 1 / 0.9 
+
+    // outputs
+    float v_turtle;
+    float w_turtle;
+
+};
+
+void update_GainSpeedBlock(struct GainSpeedBlock &bloque){
+
+    bloque.v_turtle = bloque.v_desired * bloque.pre_gain_v;
+    bloque.w_turtle = bloque.w_desired * bloque.pre_gain_w;
+
+}
+
 void update_TrajectoryOutput(struct GenerationTrajectoireBlock &bloque, float time_current){
 
     static float a[4];
@@ -106,6 +129,7 @@ int main(int argv, char *argc []){
     struct GenerationTrajectoireBlock block_trajectory = {.p0 = 0, .pf = 10, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
     struct ReferenceChangeBlock reference_change_block = {.x = 0, .y = 0, .theta = 0, .x_head = 0, .y_head = 0, .theta_head = 0 };
     struct SpeedConverterBlock speed_converter_block = {.v_rigth = 0, .v_left  = 0, .v = 0, .w = 0};
+    struct GainSpeedBlock gain_speed_block = {.v_desired = 0, .w_desired = 0, .v_turtle = 0, .w_turtle = 0};
 
     // Robot's structs
     struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 0.17};
@@ -127,18 +151,18 @@ int main(int argv, char *argc []){
 
     std::cout << "Test update_CoordsHead" << '\n';
 
-    for(i = 0 ; i < 5 ; i = i+0.1){
-        reference_change_block.x = i;
-        reference_change_block.y = i;
+        for(i = 0 ; i < 5 ; i = i+0.1){
+            reference_change_block.x = i;
+            reference_change_block.y = i;
 
-        if(i > 2) {
-            reference_change_block.theta += 0.5 ;
+            if(i > 2) {
+                reference_change_block.theta += 0.5 ;
+            }
+
+            update_CoordsHead(reference_change_block,robot_paramaters);
+            
+            std::cout << reference_change_block.x_head << " , " << reference_change_block.y_head << " , " << reference_change_block.theta_head << '\n';
         }
-
-        update_CoordsHead(reference_change_block,robot_paramaters);
-        
-        std::cout << reference_change_block.x_head << " , " << reference_change_block.y_head << " , " << reference_change_block.theta_head << '\n';
-    }
 
     // Test convert_speed
     
@@ -158,5 +182,25 @@ int main(int argv, char *argc []){
         std::cout << speed_converter_block.v << " , " << speed_converter_block.w << '\n';
     }
 
+
+    // Test update_GainSpeedBlock
+    std::cout << "update_GainSpeedBlock" << '\n';
+    for(i = 0 ; i < 5 ; i = i+0.1){
+        gain_speed_block.v_desired = 0.3;
+        gain_speed_block.w_desired = 1;
+
+        if(i > 2) {
+            gain_speed_block.v_desired = 0.25;
+            gain_speed_block.w_desired = 0.5;
+        }
+
+        update_GainSpeedBlock(gain_speed_block);
+        
+        std::cout << gain_speed_block.v_desired << " , " << gain_speed_block.v_turtle << '\n';
+        std::cout << gain_speed_block.w_desired << " , " << gain_speed_block.w_turtle << '\n';
+
+    }
+
+    
     return 0;
 }
