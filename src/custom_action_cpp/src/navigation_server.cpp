@@ -78,11 +78,15 @@ public:
 
 private:
   // Subscription
+  mutable uint8_t sensor_data = 0;
   void topic_callback(const rcl_interfaces::msg::Log::SharedPtr msg) const
     {
-      RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->name.c_str());
+      // TODO read real data
+      sensor_data = msg->level;
+      RCLCPP_INFO(this->get_logger(), "I heard: level=%d, name='%s'", msg->level, msg->name.c_str());
     }
   rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr subscription_;
+
 
   // Publisher
   rclcpp::TimerBase::SharedPtr timer_;
