@@ -35,14 +35,14 @@ public:
 
     // Publish to /cmd_vel
      publisher_ = this->create_publisher<std_msgs::msg::String>("myrosout2", 10);
-    auto timer_callback =
-      [this]() -> void {
-        auto message = std_msgs::msg::String();
-        message.data = "Hello, world! " + std::to_string(this->count_++);
-        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
-        this->publisher_->publish(message);
-      };
-    timer_ = this->create_wall_timer(500ms, timer_callback);
+    // auto timer_callback =
+    //   [this]() -> void {
+    //     auto message = std_msgs::msg::String();
+    //     message.data = "Hello, world! " + std::to_string(this->count_++);
+    //     RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+    //     this->publisher_->publish(message);
+    //   };
+    // timer_ = this->create_wall_timer(500ms, timer_callback);
 
     // Navigation Action
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
@@ -92,6 +92,13 @@ private:
   // Action
   rclcpp_action::Server<UsineGoalPose>::SharedPtr action_server_;
 
+  void send_command(){
+    auto message = std_msgs::msg::String();
+    message.data = "Hello, world! " + std::to_string(this->count_++);
+    RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+    this->publisher_->publish(message);
+  }
+
   void execute(const std::shared_ptr<GoalHandleUsineGoalPose> goal_handle) {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(1);
@@ -130,8 +137,10 @@ private:
       feedback->theta_error_speed = 3;
 
       // Publish feedback
+      send_command();
       goal_handle->publish_feedback(feedback);
       RCLCPP_INFO(this->get_logger(), "Publish feedback");
+
 
       loop_rate.sleep();
     }
