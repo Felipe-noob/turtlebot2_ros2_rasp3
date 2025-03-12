@@ -10,6 +10,7 @@ using namespace std::chrono_literals;
 void treat_trajectory_request(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> request,
           std::shared_ptr<example_interfaces::srv::AddTwoInts::Response>      response)
 {
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Waiting for request...");
   response->sum = request->a + request->b;
   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Incoming request\na: %ld" " b: %ld",
                 request->a, request->b);
@@ -91,14 +92,7 @@ bool notify_turtle_arrival() {
   return result.get()->sum;
 }
 
-int main(int argc, char **argv)
-{
-  rclcpp::init(argc, argv);
-
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Fetching turtle_id");
-  const uint16_t turtle_id = notify_turtle_initial_position();
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "turtle_id = %d", turtle_id);
-
+void server(uint16_t turtle_id){
   std::string node_name = "turtlebot_navigation_server_" + std::to_string(turtle_id);
   std::string service_name = "turtlebot_navigation_" + std::to_string(turtle_id);
 
@@ -110,5 +104,29 @@ int main(int argc, char **argv)
   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Ready to perform a trajectory.");
 
   rclcpp::spin(node);
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Shutdown server thread...");
   rclcpp::shutdown();
+}
+
+int main(int argc, char **argv)
+{
+  rclcpp::init(argc, argv);
+
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Fetching turtle_id");
+  const uint16_t turtle_id = notify_turtle_initial_position();
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "turtle_id = %d", turtle_id);
+
+  std::thread thread_server(server, turtle_id);
+  // Wait for thread to come online. I could use a variable for this instead
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+  // TODO: call the action
+
+  // send sequest to manager
+  notify_turtle_arrival();
+
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Shutdown rclcpp...");
+  rclcpp::shutdown();
+  thread_server.join();
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Exiting...");
 }
