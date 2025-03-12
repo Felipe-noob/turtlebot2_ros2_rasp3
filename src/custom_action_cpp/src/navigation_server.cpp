@@ -1,6 +1,7 @@
 #include <functional>
 #include <memory>
 #include <thread>
+#include <chrono>
 
 #include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -10,6 +11,8 @@
 #include "custom_action_cpp/visibility_control.h"
 #include "std_msgs/msg/string.hpp"
 #include "rcl_interfaces/msg/log.hpp"
+
+using namespace std::chrono_literals;
 
 namespace custom_action_cpp {
 class NavigationActionServer : public rclcpp::Node {
@@ -24,10 +27,24 @@ public:
       : Node("navigation_action_server", options) {
     using namespace std::placeholders;
 
+
+    // subscribe to odom
     subscription_ = this->create_subscription<rcl_interfaces::msg::Log>(
       "myrosout", 10, std::bind(&NavigationActionServer::topic_callback, this, _1));
-      RCLCPP_INFO(this->get_logger(), "Listener on topic /topic");
+      RCLCPP_INFO(this->get_logger(), "Listener on topic /topic"); // TODO print real node
 
+    // Publish to /cmd_vel
+     publisher_ = this->create_publisher<std_msgs::msg::String>("myrosout2", 10);
+    auto timer_callback =
+      [this]() -> void {
+        auto message = std_msgs::msg::String();
+        message.data = "Hello, world! " + std::to_string(this->count_++);
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+        this->publisher_->publish(message);
+      };
+    timer_ = this->create_wall_timer(500ms, timer_callback);
+
+    // Navigation Action
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
                               std::shared_ptr<const UsineGoalPose::Goal> goal) {
       RCLCPP_INFO(this->get_logger(),
@@ -57,17 +74,22 @@ public:
     this->action_server_ = rclcpp_action::create_server<UsineGoalPose>(
         this, "navigation", handle_goal, handle_cancel, handle_accepted);
 
-    // TODO Init listener thread here
-    // std::thread th1(listenerThread);
   }
 
 private:
+  // Subscription
   void topic_callback(const rcl_interfaces::msg::Log::SharedPtr msg) const
     {
       RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->name.c_str());
     }
   rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr subscription_;
 
+  // Publisher
+  rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
+  size_t count_;
+
+  // Action
   rclcpp_action::Server<UsineGoalPose>::SharedPtr action_server_;
 
   void execute(const std::shared_ptr<GoalHandleUsineGoalPose> goal_handle) {
