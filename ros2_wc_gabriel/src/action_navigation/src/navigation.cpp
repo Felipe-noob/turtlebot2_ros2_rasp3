@@ -36,7 +36,7 @@ struct ReferenceChangeBlock{
     float x_head;        // [m]
     float y_head;        // [m]
     float theta_head;    // [rad ?]
-  };
+};
 
 struct RobotParamater{
     float Km;       // Static Gain [m*s*V]
@@ -116,8 +116,29 @@ struct IntegratorBlock
     float theta;
 };
 
+struct CommandBlock{
 
-void calcule_integrator(struct IntegratorBlock &bloque, float dt){
+    // inputs
+    float x_ref;
+    float y_ref;
+
+    float x_head;
+    float y_head;
+
+    // outputs
+
+    float ux;
+    float uy;
+
+};
+
+void update_CommandBlock(struct CommandBlock &bloque, float gain_K){
+
+    bloque.ux = gain_K * (bloque.x_ref - bloque.x_head) ;
+    bloque.uy = gain_K * (bloque.y_ref - bloque.y_head) ;
+}
+
+void update_integrator(struct IntegratorBlock &bloque, float dt){
 
     static float somme_x = bloque.initial_x; 
     static float somme_y = bloque.initial_y; 
@@ -213,25 +234,26 @@ void convert_speed(struct SpeedConverterBlock &bloque, struct RobotParamater &pa
 
 }
 
-float convert_degrees2radius(float degrees){
-   float radius;
-    return radius = (degrees*2*M_PI)*360; 
+float convert_degrees2radians(float degrees){
+   float radians;
+    return radians = (degrees*2*M_PI)*360; 
 }
 
 int main(int argv, char *argc []){
 
     // Blocks definition
     struct GenerationTrajectoireBlock block_trajectory = {.p0 = 0, .pf = 10, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
-    struct ReferenceChangeBlock reference_change_block = {.x = 0, .y = 0, .theta = 0, .x_head = 0, .y_head = 0, .theta_head = 0 };
-    struct SpeedConverterBlock speed_converter_block = {.v_rigth = 0, .v_left  = 0, .v = 0, .w = 0};
-    struct GainSpeedBlock gain_speed_block = {.v_desired = 0, .w_desired = 0, .v_turtle = 0, .w_turtle = 0};
-    struct M_inverseBlock inverse_matrix_block = {.ux = 0, .uy = 0, .theta = 0, .v_desired = 0, .w_desired = 0};
-    struct IntegratorBlock itegrator_block = {.dx = 0, .dy = 0, .dtheta = 0, .initial_x = 0, .initial_y = 0, .initial_theta = 0, .x = 0, .y = 0, .theta = 0 };
+    struct ReferenceChangeBlock reference_change_block = {};
+    struct SpeedConverterBlock speed_converter_block = {};
+    struct GainSpeedBlock gain_speed_block = {};
+    struct M_inverseBlock inverse_matrix_block = {};
+    struct IntegratorBlock itegrator_block = {};
+    struct CommandBlock command_block = {};
     
 
     // Robot's structs
     struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 0.17};
-    struct TurtlebotBlock turtlebot2 = {.v_turtle = 0, .w_turtle = 0, .theta = 0, .dx = 0, .dy = 0, .dtheta = 0};
+    struct TurtlebotBlock turtlebot2 = {};
   
     float i = 0;
     float t_current;
@@ -335,7 +357,7 @@ int main(int argv, char *argc []){
         itegrator_block.initial_theta = 0;
 
           
-        calcule_integrator(itegrator_block,delta);
+        update_integrator(itegrator_block,delta);
 
         std::cout << itegrator_block.x << " , " << itegrator_block.y << " , " << itegrator_block.theta << '\n';
 
