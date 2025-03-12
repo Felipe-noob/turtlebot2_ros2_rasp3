@@ -3,6 +3,10 @@
 #include <thread>
 #include <chrono>
 
+#include <string>
+#include <iostream>
+#include <sstream>
+
 #include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -13,6 +17,16 @@
 #include "rcl_interfaces/msg/log.hpp"
 
 using namespace std::chrono_literals;
+
+template <
+    class result_t   = std::chrono::milliseconds,
+    class clock_t    = std::chrono::steady_clock,
+    class duration_t = std::chrono::milliseconds
+>
+auto since(std::chrono::time_point<clock_t, duration_t> const& start)
+{
+    return std::chrono::duration_cast<result_t>(clock_t::now() - start);
+}
 
 namespace custom_action_cpp {
 class NavigationActionServer : public rclcpp::Node {
@@ -87,15 +101,10 @@ private:
     }
   rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr subscription_;
 
-
   // Publisher
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
   size_t count_;
-
-  // Action
-  rclcpp_action::Server<UsineGoalPose>::SharedPtr action_server_;
-
   void send_command(){
     auto message = std_msgs::msg::String();
     message.data = "Hello, world! " + std::to_string(this->count_++);
@@ -103,10 +112,15 @@ private:
     this->publisher_->publish(message);
   }
 
+  // Action
+  rclcpp_action::Server<UsineGoalPose>::SharedPtr action_server_;
+
+
   void execute(const std::shared_ptr<GoalHandleUsineGoalPose> goal_handle) {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(1);
     const auto goal = goal_handle->get_goal();
+
     auto feedback = std::make_shared<UsineGoalPose::Feedback>();
     auto result = std::make_shared<UsineGoalPose::Result>();
 
@@ -122,8 +136,16 @@ private:
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
         return;
       }
+
+      // Send command to motors
+      send_command();
+
       // TODO: read data from robot
-      // Update sequence
+
+      // TODO: calculate command for next cycle
+
+      // Send action feedback
+      auto start = std::chrono::steady_clock::now();
       feedback->x_current_pose = 3;
       feedback->y_current_pose = 3;
       feedback->theta_current_pose = 3;
@@ -140,12 +162,9 @@ private:
       feedback->y_error_speed = 3;
       feedback->theta_error_speed = 3;
 
-      // Publish feedback
-      send_command();
       goal_handle->publish_feedback(feedback);
+      std::cout << "Elapsed(ms)=" << since(start).count() << std::endl;
       RCLCPP_INFO(this->get_logger(), "Publish feedback");
-
-
       loop_rate.sleep();
     }
 
