@@ -36,7 +36,7 @@ struct ReferenceChangeBlock{
     float x_head;        // [m]
     float y_head;        // [m]
     float theta_head;    // [rad ?]
-  };
+};
 
 struct RobotParamater{
     float Km;       // Static Gain [m*s*V]
@@ -116,8 +116,29 @@ struct IntegratorBlock
     float theta;
 };
 
+struct CommandBlock{
 
-void calcule_integrator(struct IntegratorBlock &bloque, float dt){
+    // inputs
+    float x_ref;
+    float y_ref;
+
+    float x_head;
+    float y_head;
+
+    // outputs
+
+    float ux;
+    float uy;
+
+};
+
+void update_CommandBlock(struct CommandBlock &bloque, float gain_K){
+
+    bloque.ux = gain_K * (bloque.x_ref - bloque.x_head) ;
+    bloque.uy = gain_K * (bloque.y_ref - bloque.y_head) ;
+}
+
+void update_integrator(struct IntegratorBlock &bloque, float dt){
 
     static float somme_x = bloque.initial_x; 
     static float somme_y = bloque.initial_y; 
@@ -148,9 +169,9 @@ void calcule_integrator(struct IntegratorBlock &bloque, float dt){
 
 void update_TurtlebotBlock(struct TurtlebotBlock &bloque){
 
-    bloque.dx = cos(bloque.theta) * bloque.v_turtle * 0.8;
-    bloque.dy = sin(bloque.theta) * bloque.v_turtle * 0.8;
-    bloque.dtheta = bloque.w_turtle * 0.9;
+    bloque.dx = cos(bloque.theta) * bloque.v_turtle;
+    bloque.dy = sin(bloque.theta) * bloque.v_turtle;
+    bloque.dtheta = bloque.w_turtle;
 
 }
 
@@ -213,34 +234,47 @@ void convert_speed(struct SpeedConverterBlock &bloque, struct RobotParamater &pa
 
 }
 
-float convert_degrees2radius(float degrees){
-   float radius;
-    return radius = (degrees*2*M_PI)*360; 
+float convert_degrees2radians(float degrees){
+   float radians;
+    return radians = (degrees*2*M_PI)*360; 
 }
 
 int main(int argv, char *argc []){
 
     // Blocks definition
-    struct GenerationTrajectoireBlock block_trajectory = {.p0 = 0, .pf = 10, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
-    struct ReferenceChangeBlock reference_change_block = {.x = 0, .y = 0, .theta = 0, .x_head = 0, .y_head = 0, .theta_head = 0 };
-    struct SpeedConverterBlock speed_converter_block = {.v_rigth = 0, .v_left  = 0, .v = 0, .w = 0};
-    struct GainSpeedBlock gain_speed_block = {.v_desired = 0, .w_desired = 0, .v_turtle = 0, .w_turtle = 0};
-    struct M_inverseBlock inverse_matrix_block = {.ux = 0, .uy = 0, .theta = 0, .v_desired = 0, .w_desired = 0};
-    struct IntegratorBlock itegrator_block = {.dx = 0, .dy = 0, .dtheta = 0, .initial_x = 0, .initial_y = 0, .initial_theta = 0, .x = 0, .y = 0, .theta = 0 };
-    
+    struct GenerationTrajectoireBlock block_trajectory_X = {.p0 = 0, .pf = 10, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
+    struct GenerationTrajectoireBlock block_trajectory_Y = {.p0 = 0, .pf = 5, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
 
+    struct CommandBlock command_block = {};
+    struct M_inverseBlock inverse_matrix_block = {};
+    struct GainSpeedBlock gain_speed_block = {};
+
+    struct TurtlebotBlock turtlebot2 = {};
+    struct IntegratorBlock itegrator_block = {};
+    struct ReferenceChangeBlock reference_change_block = {};
+    
     // Robot's structs
     struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 0.17};
-    struct TurtlebotBlock turtlebot2 = {.v_turtle = 0, .w_turtle = 0, .theta = 0, .dx = 0, .dy = 0, .dtheta = 0};
   
     float t = 0;
     float t_current;
-    float delta = 0.01;
+    float delta = 0.1;
 
     for(t = 0; t < 10; t = t + delta){
 
-        inverse_matrix_block.ux = 2;
-        inverse_matrix_block.uy = 2;
+        update_TrajectoryOutput(block_trajectory_X,t);
+        update_TrajectoryOutput(block_trajectory_Y,t);
+
+        command_block.x_ref = block_trajectory_X.q;
+        command_block.y_ref = block_trajectory_Y.q;
+
+        command_block.x_head = reference_change_block.x_head;
+        command_block.y_head = reference_change_block.y_head;
+
+        update_CommandBlock(command_block,1.0f);
+
+        inverse_matrix_block.ux = command_block.ux;
+        inverse_matrix_block.uy = command_block.uy;
         inverse_matrix_block.theta = itegrator_block.theta;
 
         update_M_inverseBlock(inverse_matrix_block, robot_paramaters);
@@ -267,7 +301,7 @@ int main(int argv, char *argc []){
         itegrator_block.dy = turtlebot2.dy;
         itegrator_block.dtheta = turtlebot2.dtheta;
 
-        calcule_integrator(itegrator_block, delta);
+        update_integrator(itegrator_block, delta);
         
         //std::cout << itegrator_block.x << " , " << itegrator_block.y << " , " << itegrator_block.theta << '\n';
 
