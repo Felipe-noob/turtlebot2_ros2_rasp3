@@ -1,7 +1,11 @@
 #include "rclcpp/rclcpp.hpp"
 #include "example_interfaces/srv/add_two_ints.hpp"
 
+#include <chrono>
+#include <cstdlib>
 #include <memory>
+
+using namespace std::chrono_literals;
 
 void add(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> request,
           std::shared_ptr<example_interfaces::srv::AddTwoInts::Response>      response)
@@ -12,9 +16,50 @@ void add(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> req
   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "sending back response: [%ld]", (long int)response->sum);
 }
 
+/**
+ * @description During the startup process, the turtlebot needs to get an id
+ * from the coordinator. It will call a service from the coordinator
+ * TODO: call actual service, this is a mock
+ */
+uint16_t get_turtle_id() {
+  std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("add_two_ints_client");
+  rclcpp::Client<example_interfaces::srv::AddTwoInts>::SharedPtr client =
+    node->create_client<example_interfaces::srv::AddTwoInts>("add_two_ints");
+
+  // TODO NotifyTurtleInitialPosition
+  auto request = std::make_shared<example_interfaces::srv::AddTwoInts::Request>();
+  request->a = 0;
+  request->b = 0;
+
+  while (!client->wait_for_service(1s)) {
+    if (!rclcpp::ok()) {
+      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+      return 0;
+    }
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+  }
+
+  auto result = client->async_send_request(request);
+  // Wait for the result.
+  if (rclcpp::spin_until_future_complete(node, result) ==
+    rclcpp::FutureReturnCode::SUCCESS)
+  {
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Sum: %ld", result.get()->sum);
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to call service add_two_ints");
+  }
+
+  return result.get()->sum;
+}
+
+
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
+
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Fetching turtle_id");
+  const uint16_t turtle_id = get_turtle_id();
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "turtle_id = %d", turtle_id);
 
   std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("turtlebot_navigation_server");
 
