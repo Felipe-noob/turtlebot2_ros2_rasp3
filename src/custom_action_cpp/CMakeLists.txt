@@ -18,6 +18,7 @@ find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rcl_interfaces REQUIRED)
+find_package(example_interfaces REQUIRED)
 
 # SERVER
 add_library(action_server SHARED
@@ -62,6 +63,15 @@ install(TARGETS
   RUNTIME DESTINATION bin)
 
 # ENDCLIENT
+
+# SERVER
+add_executable(turtlebot_navigation_server src/turtlebot_navigation.cpp)
+ament_target_dependencies(turtlebot_navigation_server rclcpp example_interfaces)
+
+install(TARGETS
+    turtlebot_navigation_server
+  DESTINATION lib/${PROJECT_NAME})
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
