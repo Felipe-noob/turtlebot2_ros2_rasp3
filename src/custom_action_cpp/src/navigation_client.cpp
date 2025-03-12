@@ -30,6 +30,7 @@ public:
     using namespace std::placeholders;
 
     this->timer_->cancel();
+    RCLCPP_INFO(this->get_logger(), "Client waiting for server");
 
     if (!this->client_ptr_->wait_for_action_server()) {
       RCLCPP_ERROR(this->get_logger(),

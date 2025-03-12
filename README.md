@@ -62,6 +62,11 @@ This node will also be responsible for demanding a unique ID for the turtle on s
 The details should be all described and function with ROS2 interfaces and graphs for the final release.
 
 [^1]: Since we only have a limited set of desired end positions (2 on each side), this will be abstracted away and stored on a lookup table.
+
+### Implementation
+
+ROS2 has a feature called "composition". This allowes multiple talkers, listeners, servers and clients. Notably, actions are not supported, the easiest solution found is to first get turtle_id, then to call the system shell to launch another ros2 process with the action and the necessary node name remapping. This solution is by no means good practice, but it gets the job done for a beginner.
+
 ## Future Work
 
 The Kinect camera is not yet tested. Ideally, this should be able to run on a Raspberry Pi 3 (1GiB, 16GiB).
