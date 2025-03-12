@@ -72,6 +72,44 @@ struct GainSpeedBlock{
 
 };
 
+struct TurtlebotBlock{
+
+    // input
+    float v_turtle;
+    float w_turtle;
+
+    //output
+    float x;
+    float y;
+    float theta;
+};
+
+struct M_inverseBlock{
+
+    // input
+    float ux;
+    float uy;
+    float theta;
+
+    //output
+    float v_desired;
+    float w_desired;
+
+};
+
+void update_M_inverseBlock(struct M_inverseBlock &bloque,struct RobotParamater &param){
+    
+    float M_inv[2][2] = {
+        {cos(bloque.theta),sin(bloque.theta)},
+        {(-1/param.R) * sin(bloque.theta),(1/param.R) * cos(bloque.theta)}
+    }; 
+
+    bloque.v_desired = M_inv[0][0] * bloque.ux + M_inv[0][1]*bloque.uy;
+    bloque.w_desired = M_inv[1][0] * bloque.ux + M_inv[1][1]*bloque.uy;
+
+
+}
+
 void update_GainSpeedBlock(struct GainSpeedBlock &bloque){
 
     bloque.v_turtle = bloque.v_desired * bloque.pre_gain_v;
@@ -130,9 +168,12 @@ int main(int argv, char *argc []){
     struct ReferenceChangeBlock reference_change_block = {.x = 0, .y = 0, .theta = 0, .x_head = 0, .y_head = 0, .theta_head = 0 };
     struct SpeedConverterBlock speed_converter_block = {.v_rigth = 0, .v_left  = 0, .v = 0, .w = 0};
     struct GainSpeedBlock gain_speed_block = {.v_desired = 0, .w_desired = 0, .v_turtle = 0, .w_turtle = 0};
+    struct M_inverseBlock inverse_matrix_block = {.ux = 0, .uy = 0, .theta = 0, .v_desired = 0, .w_desired = 0};
+    
 
     // Robot's structs
     struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 0.17};
+    struct TurtlebotBlock turtlebot2 = {.v_turtle = 0, .w_turtle = 0, .x = 0, .y = 0, .theta = 0};
   
     float i = 0;
     float t_current;
@@ -201,6 +242,21 @@ int main(int argv, char *argc []){
 
     }
 
-    
+    // Test M_inverseBlock
+    std::cout << "M_inverseBlock" << '\n';
+    for(i = 0 ; i < 5 ; i = i+0.1){
+        inverse_matrix_block.ux = 1;
+        inverse_matrix_block.uy = 0;
+
+        if(i > 2) {
+            inverse_matrix_block.ux = 0;
+            inverse_matrix_block.uy = 1;
+        }
+
+        update_M_inverseBlock(inverse_matrix_block,robot_paramaters);
+        
+        std::cout << inverse_matrix_block.v_desired << " , " << inverse_matrix_block.w_desired << '\n';
+    }
+
     return 0;
 }
