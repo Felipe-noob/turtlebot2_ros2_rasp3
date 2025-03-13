@@ -28,7 +28,6 @@ auto since(std::chrono::time_point<clock_t, duration_t> const& start)
     return std::chrono::duration_cast<result_t>(clock_t::now() - start);
 }
 
-// TODO: Recieve turtle_id via command line and concatenate to node and action names
 namespace custom_action_cpp {
 class NavigationActionServer : public rclcpp::Node {
 public:

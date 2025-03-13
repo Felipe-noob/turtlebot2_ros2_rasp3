@@ -34,7 +34,10 @@ ament_target_dependencies(action_server
   "rclcpp_action"
   "rclcpp_components"
   "std_msgs"
-  "rcl_interfaces")
+  "rcl_interfaces"
+  "turtle_interface"
+  "coordinator_interface"
+)
 rclcpp_components_register_node(action_server PLUGIN "custom_action_cpp::NavigationActionServer" EXECUTABLE navigation_server)
 install(TARGETS
   action_server
@@ -54,7 +57,10 @@ ament_target_dependencies(action_client
   "custom_action_interfaces"
   "rclcpp"
   "rclcpp_action"
-  "rclcpp_components")
+  "rclcpp_components"
+  "turtle_interface"
+  "coordinator_interface"
+)
 rclcpp_components_register_node(action_client PLUGIN "custom_action_cpp::NavigationActionClient" EXECUTABLE navigation_client)
 install(TARGETS
   action_client
@@ -70,6 +76,8 @@ ament_target_dependencies(turtlebot_navigation_server
   "rclcpp"
   "example_interfaces"
   "custom_action_interfaces"
+  "turtle_interface"
+  "coordinator_interface"
 )
 
 install(TARGETS
