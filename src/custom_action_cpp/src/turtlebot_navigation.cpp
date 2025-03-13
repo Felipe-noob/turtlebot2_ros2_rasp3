@@ -16,8 +16,15 @@ using namespace std::chrono_literals;
 
 std::mutex mutex_in_trajectory;
 
-bool in_trajectory = false;
 auto goal_msg = UsineGoalPose::Goal();
+
+enum TurtlePosition_e {
+  UNKNOWN,
+  INPUT_SIDE1,
+  INPUT_SIDE2,
+  OUTPUT_SIDE1,
+  OUTPUT_SIDE2
+};
 
 void treat_trajectory_request(const std::shared_ptr<turtle_interface::srv::TurtleMove::Request> request,
           std::shared_ptr<turtle_interface::srv::TurtleMove::Response>      response)
@@ -25,17 +32,45 @@ void treat_trajectory_request(const std::shared_ptr<turtle_interface::srv::Turtl
   RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Incoming request\nturtle_id: %d" " turtle_position: %d",
                 request->turtle_id, request->turtle_position);
 
-  if(in_trajectory){
-    // reject the demand
-    response->ack = 1; // TODO see André error codes
-  } else {
+
     // TODO read position from lookup table
-    goal_msg.x_goal_pose = 3;
-    goal_msg.y_goal_pose = 4;
-    goal_msg.theta_goal_pose = 5;
     response->ack=0; //TODO see code for OK
-    mutex_in_trajectory.unlock();
-  }
+    switch(request->turtle_position){
+      case INPUT_SIDE1:
+        goal_msg.x_goal_pose = 0;
+        goal_msg.y_goal_pose = 0.4;
+        goal_msg.theta_goal_pose = 0;
+        break;
+      case INPUT_SIDE2:
+        goal_msg.x_goal_pose = 0;
+        goal_msg.y_goal_pose = -0.4;
+        goal_msg.theta_goal_pose = 0;
+        break;
+      case OUTPUT_SIDE1:
+        goal_msg.x_goal_pose = 3.6;
+        goal_msg.y_goal_pose = 0.4;
+        goal_msg.theta_goal_pose = 0;
+        break;
+      case OUTPUT_SIDE2:
+        goal_msg.x_goal_pose = 3.6;
+        goal_msg.y_goal_pose = -0.4;
+        goal_msg.theta_goal_pose = 0;
+        break;
+      case UNKNOWN:
+      default:
+        goal_msg.x_goal_pose = 0;
+        goal_msg.y_goal_pose = 0;
+        goal_msg.theta_goal_pose = 0;
+        response->ack=1; // TODO see code for error
+        break;
+    }
+    if(response->ack == 0){
+      if(!mutex_in_trajectory.try_lock()){
+        // The robot is already in a trajectory
+        // reject the demand
+        response->ack = 1; // TODO see André error codes
+      }
+    }
   RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "sending back response: [%ld]", (long int)response->ack);
 }
 
