@@ -87,7 +87,7 @@ public:
 
 private:
   // Subscription
-  double convert_quaternion(double w, double z) const{
+  double convert_quaternion(double z) const{
     return 2*asin(z);
   }
   mutable std::mutex mutex_cycle;
@@ -97,10 +97,9 @@ private:
     {
       actual_pose.x = msg->pose.pose.position.x;
       actual_pose.y = msg->pose.pose.position.y;
-      double w = msg->pose.pose.orientation.w;
       double z = msg->pose.pose.orientation.z;
 
-      actual_pose.z = convert_quaternion(w, z);
+      actual_pose.z = convert_quaternion(z);
       // RCLCPP_DEBUG(this->get_logger(), "Recieved data: (x: %lf, y: %lf, theta: %lf)", actual_pose.x, actual_pose.y, actual_pose.z);
 
       // allow the calculations to take place
