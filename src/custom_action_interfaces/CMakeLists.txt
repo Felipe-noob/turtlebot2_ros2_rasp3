@@ -27,7 +27,6 @@ find_package(rosidl_default_generators REQUIRED)
 
 set(action_files
   "action/UsineGoalPose.action"
-  "action/Fibonacci.action"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

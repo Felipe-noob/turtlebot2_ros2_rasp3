@@ -14,7 +14,11 @@
   <depend>rclcpp_action</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
   <depend>rcl_interfaces</depend>
+  <depend>turtle_interface</depend>
+  <depend>coordinator_interface</depend>
 
 
   <test_depend>ament_lint_auto</test_depend>

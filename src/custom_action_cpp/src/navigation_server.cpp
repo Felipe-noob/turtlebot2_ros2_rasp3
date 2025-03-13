@@ -1,34 +1,31 @@
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <thread>
-#include <chrono>
 
-#include <string>
+#include <cmath>
 #include <iostream>
 #include <sstream>
+#include <string>
 
-#include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
 #include "custom_action_cpp/visibility_control.h"
-#include "std_msgs/msg/string.hpp"
-#include "rcl_interfaces/msg/log.hpp"
+#include "custom_action_interfaces/action/usine_goal_pose.hpp"
+#include "geometry_msgs/msg/twist.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 
 using namespace std::chrono_literals;
 
-template <
-    class result_t   = std::chrono::milliseconds,
-    class clock_t    = std::chrono::steady_clock,
-    class duration_t = std::chrono::milliseconds
->
-auto since(std::chrono::time_point<clock_t, duration_t> const& start)
-{
-    return std::chrono::duration_cast<result_t>(clock_t::now() - start);
+template <class result_t = std::chrono::milliseconds,
+          class clock_t = std::chrono::steady_clock,
+          class duration_t = std::chrono::milliseconds>
+auto since(std::chrono::time_point<clock_t, duration_t> const &start) {
+  return std::chrono::duration_cast<result_t>(clock_t::now() - start);
 }
 
-// TODO: Recieve turtle_id via command line and concatenate to node and action names
 namespace custom_action_cpp {
 class NavigationActionServer : public rclcpp::Node {
 public:
@@ -42,22 +39,17 @@ public:
       : Node("navigation_action_server", options) {
     using namespace std::placeholders;
 
-
     // subscribe to odom
-    subscription_ = this->create_subscription<rcl_interfaces::msg::Log>(
-      "myrosout", 10, std::bind(&NavigationActionServer::topic_callback, this, _1));
-      RCLCPP_INFO(this->get_logger(), "Listener on topic /topic"); // TODO print real node
+    std::string node_name = "odom";
+
+    subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
+        node_name, 10,
+        std::bind(&NavigationActionServer::topic_callback, this, _1));
+    RCLCPP_INFO(this->get_logger(), "Listener on topic /%s", node_name.c_str());
 
     // Publish to /cmd_vel
-     publisher_ = this->create_publisher<std_msgs::msg::String>("myrosout2", 10);
-    // auto timer_callback =
-    //   [this]() -> void {
-    //     auto message = std_msgs::msg::String();
-    //     message.data = "Hello, world! " + std::to_string(this->count_++);
-    //     RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
-    //     this->publisher_->publish(message);
-    //   };
-    // timer_ = this->create_wall_timer(500ms, timer_callback);
+    publisher_ =
+        this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
 
     // Navigation Action
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
@@ -88,34 +80,47 @@ public:
 
     this->action_server_ = rclcpp_action::create_server<UsineGoalPose>(
         this, "navigation", handle_goal, handle_cancel, handle_accepted);
-
   }
 
 private:
   // Subscription
-  mutable uint8_t sensor_data = 0;
-  void topic_callback(const rcl_interfaces::msg::Log::SharedPtr msg) const
-    {
-      // TODO read real data
-      sensor_data = msg->level;
-      RCLCPP_INFO(this->get_logger(), "I heard: level=%d, name='%s'", msg->level, msg->name.c_str());
-    }
-  rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr subscription_;
+  double convert_quaternion(double z) const { return 2 * asin(z); }
+  mutable std::mutex mutex_cycle;
+
+  mutable geometry_msgs::msg::Point actual_pose = geometry_msgs::msg::Point();
+  void topic_callback(const nav_msgs::msg::Odometry::SharedPtr msg) const {
+    actual_pose.x = msg->pose.pose.position.x;
+    actual_pose.y = msg->pose.pose.position.y;
+    double z = msg->pose.pose.orientation.z;
+
+    actual_pose.z = convert_quaternion(z);
+    // RCLCPP_DEBUG(this->get_logger(), "Recieved data: (x: %lf, y: %lf, theta:
+    // %lf)", actual_pose.x, actual_pose.y, actual_pose.z);
+
+    // allow the calculations to take place
+    mutex_cycle.unlock();
+  }
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_;
 
   // Publisher
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
-  size_t count_;
-  void send_command(){
-    auto message = std_msgs::msg::String();
-    message.data = "Hello, world! " + std::to_string(this->count_++);
-    RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
+
+  void send_command() {
+    auto message = geometry_msgs::msg::Twist();
+    message.linear.x = 0;
+    message.linear.y = 0;
+    message.linear.z = 0;
+
+    message.angular.x = 0;
+    message.angular.y = 0;
+    message.angular.z = -1;
+
+    RCLCPP_INFO(this->get_logger(), "Publishing to cmd_vel");
     this->publisher_->publish(message);
   }
 
   // Action
   rclcpp_action::Server<UsineGoalPose>::SharedPtr action_server_;
-
 
   void execute(const std::shared_ptr<GoalHandleUsineGoalPose> goal_handle) {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
@@ -128,11 +133,12 @@ private:
     // TODO: stop condition
     // TODO: import command from Gabriel
     for (int i = 1; (i < 10) && rclcpp::ok(); ++i) {
+      mutex_cycle.lock();
       // Check if there is a cancel request
       if (goal_handle->is_canceling()) {
-        result->x_final_pose = 2002;
-        result->y_final_pose = 2002;
-        result->theta_final_pose = 2002;
+        result->x_final_pose = actual_pose.x;
+        result->y_final_pose = actual_pose.y;
+        result->theta_final_pose = actual_pose.z;
         goal_handle->canceled(result);
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
         return;
@@ -141,30 +147,31 @@ private:
       // Send command to motors
       send_command();
 
-      // TODO: read data from robot
-
       // TODO: calculate command for next cycle
 
       // Send action feedback
-      feedback->x_current_pose = 3;
-      feedback->y_current_pose = 3;
-      feedback->theta_current_pose = 3;
+      feedback->x_current_pose = actual_pose.x;
+      feedback->y_current_pose = actual_pose.y;
+      feedback->theta_current_pose = actual_pose.z;
+
       feedback->x_intermediate_goal_pose = 3;
       feedback->y_intermediate_goal_pose = 3;
       feedback->theta_intermediate_goal_pose = 3;
+
       feedback->x_speed = 3;
       feedback->y_speed = 3;
       feedback->theta_speed = 3;
+
       feedback->x_error_pose = 3;
       feedback->y_error_pose = 3;
       feedback->theta_error_pose = 3;
+
       feedback->x_error_speed = 3;
       feedback->y_error_speed = 3;
       feedback->theta_error_speed = 3;
 
       goal_handle->publish_feedback(feedback);
       RCLCPP_INFO(this->get_logger(), "Publish feedback");
-      loop_rate.sleep();
     }
 
     // Check if goal is done
