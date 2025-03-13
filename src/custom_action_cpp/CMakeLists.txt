@@ -22,6 +22,7 @@ find_package(example_interfaces REQUIRED)
 find_package(turtle_interface REQUIRED)
 find_package(coordinator_interface REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 
 # SERVER
 add_library(action_server SHARED
@@ -39,6 +40,7 @@ ament_target_dependencies(action_server
   "geometry_msgs"
   "turtle_interface"
   "coordinator_interface"
+  "nav_msgs"
 )
 rclcpp_components_register_node(action_server PLUGIN "custom_action_cpp::NavigationActionServer" EXECUTABLE navigation_server)
 install(TARGETS

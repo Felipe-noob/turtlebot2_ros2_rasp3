@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -14,6 +15,7 @@
 #include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "custom_action_cpp/visibility_control.h"
 #include "geometry_msgs/msg/twist.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 
 using namespace std::chrono_literals;
 
@@ -42,9 +44,9 @@ public:
 
 
     // subscribe to odom
-    std::string node_name = "myrosout";
+    std::string node_name = "odom";
 
-    subscription_ = this->create_subscription<rcl_interfaces::msg::Log>(
+    subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
       node_name, 10, std::bind(&NavigationActionServer::topic_callback, this, _1));
       RCLCPP_INFO(this->get_logger(), "Listener on topic /%s", node_name.c_str());
 
@@ -85,19 +87,25 @@ public:
 
 private:
   // Subscription
-  mutable uint8_t sensor_data = 0;
-  void topic_callback(const rcl_interfaces::msg::Log::SharedPtr msg) const
+  double convert_quaternion(double w) const{
+    return 2*acos(w);
+    // 2*asin(z);
+  }
+
+  mutable geometry_msgs::msg::Point actual_pose = geometry_msgs::msg::Point();
+  void topic_callback(const nav_msgs::msg::Odometry::SharedPtr msg) const
     {
-      // TODO read real data
-      sensor_data = msg->level;
-      RCLCPP_INFO(this->get_logger(), "I heard: level=%d, name='%s'", msg->level, msg->name.c_str());
+      actual_pose.x = msg->pose.pose.position.x;
+      actual_pose.y = msg->pose.pose.position.y;
+      double w = msg->pose.pose.orientation.w;
+      actual_pose.z = convert_quaternion(w);
+      RCLCPP_INFO(this->get_logger(), "Recieved data: (x: %lf, y: %lf, theta: %lf)", actual_pose.x, actual_pose.y, actual_pose.z);
     }
-  rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr subscription_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_;
 
   // Publisher
-  rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
-  size_t count_;
+
   void send_command(){
     auto message = geometry_msgs::msg::Twist();
     message.linear.x = 0;
@@ -106,7 +114,7 @@ private:
 
     message.angular.x = 0;
     message.angular.y = 0;
-    message.angular.z = 0;
+    message.angular.z = -1;
 
     RCLCPP_INFO(this->get_logger(), "Publishing to cmd_vel");
     this->publisher_->publish(message);
