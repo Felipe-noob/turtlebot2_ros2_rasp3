@@ -55,18 +55,10 @@ public:
     }
 
     auto goal_msg = UsineGoalPose::Goal();
-    goal_msg.x_goal_pose = get_goal_env("X_GOAL_POSE");
-    goal_msg.y_goal_pose = get_goal_env("Y_GOAL_POSE");
-    goal_msg.theta_goal_pose = get_goal_env("THETA_GOAL_POSE");
+    goal_msg.goal_position = get_goal_env("GOAL_POSITION");
 
     std::stringstream ss;
-    ss << "Sending goal: (";
-    ss << goal_msg.x_goal_pose;
-    ss << ", ";
-    ss << goal_msg.y_goal_pose;
-    ss << ", ";
-    ss << goal_msg.theta_goal_pose;
-    ss << ")";
+    ss << "Sending goal: " << goal_msg.goal_position << std::endl;
     RCLCPP_INFO(this->get_logger(), ss.str().c_str());
 
     auto send_goal_options =

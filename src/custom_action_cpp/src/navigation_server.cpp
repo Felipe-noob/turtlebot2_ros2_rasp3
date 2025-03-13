@@ -16,6 +16,8 @@
 #include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "control_system.hpp"
+#include "navigation.hpp"
 
 using namespace std::chrono_literals;
 
@@ -55,8 +57,8 @@ public:
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
                               std::shared_ptr<const UsineGoalPose::Goal> goal) {
       RCLCPP_INFO(this->get_logger(),
-                  "Received goal request with order [%f, %f, %f]",
-                  goal->x_goal_pose, goal->y_goal_pose, goal->theta_goal_pose);
+                  "Received goal request with order [%d]",
+                  goal->goal_position);
       (void)uuid;
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     };
@@ -88,6 +90,7 @@ private:
   mutable std::mutex mutex_cycle;
 
   mutable geometry_msgs::msg::Point actual_pose = geometry_msgs::msg::Point();
+
   void topic_callback(const nav_msgs::msg::Odometry::SharedPtr msg) const {
     actual_pose.x = msg->pose.pose.position.x;
     actual_pose.y = msg->pose.pose.position.y;
@@ -125,6 +128,7 @@ private:
   void execute(const std::shared_ptr<GoalHandleUsineGoalPose> goal_handle) {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(1);
+    const auto start = std::chrono::steady_clock::now();
     const auto goal = goal_handle->get_goal();
 
     auto feedback = std::make_shared<UsineGoalPose::Feedback>();
@@ -144,10 +148,15 @@ private:
         return;
       }
 
+      // TODO: calculate command for next cycle
+      auto t_current = since(start).count();
+
+      // update_TrajectoryOutput(block_trajectory_X,t_current);
+      // update_TrajectoryOutput(block_trajectory_Y,t_current);
+
       // Send command to motors
       send_command();
 
-      // TODO: calculate command for next cycle
 
       // Send action feedback
       feedback->x_current_pose = actual_pose.x;

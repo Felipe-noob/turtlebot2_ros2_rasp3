@@ -63,6 +63,7 @@ int main(int argv, char *argc []){
             
         }
 
+        // TODO start
         // To calculate trajectory step
 
         update_TrajectoryOutput(block_trajectory_X,t_current);
@@ -82,6 +83,7 @@ int main(int argv, char *argc []){
 
         // To simulate the robot (output: dx, dy, dtheta)
 
+        // TODO end
         update_TurtlebotBlock(turtlebot2, gain_speed_block, itegrator_block.theta);
 
         // To estimate x, y, theta
