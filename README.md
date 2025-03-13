@@ -1,7 +1,5 @@
 # Turtlebot2 on ROS2
 
-### Maintainer: [Ingot Robotics](https://ingotrobotics.com)
-
 There have been previous efforts to support Turtlebot2 (based on Yujin's Kobuki mobile base), but none of them are docker-based nor supporting ROS2 Iron. This repository is our attempt to address this. We followed and then edited the instructions for the release-1.0.x for the Kobuki <https://kobuki.readthedocs.io/en/release-1.0.x/software.html>, and we took inspiration from the ROS 2 Bouncy Turtlebot2 repo: <https://github.com/ros2/turtlebot2_demo/tree/master>.
 
 The repository contains a dockerfile, three udev rules files, and two packages to run a Turtlebot2 using a Hokuyo URG-04 as the navigation sensor and an Intel RealSense as a depth camera.
@@ -37,7 +35,7 @@ Inside the docker container, first source the overlay: `source install/setup.bas
 If you want a single command:
 `docker run -it --device=/dev/kobuki --device=/dev/ttyUSB0 -v /dev:/dev --device-cgroup-rule "c 81:* rmw" --device-cgroup-rule "c 189:* rmw" --net=host --ipc=host ingot/turtlebot2-ros-iron:desktop bash -c "source install/setup.bash; ros2 launch turtlebot2_bringup turtlebot2_bringup.launch.py"`
 
-### Control
+### Keyboard Control
 
 The Turtlebot2 can be controlled by a separate instance of the same container. To run this instance, drop all of the `--device` switches from the `docker run` command above:
 `docker run -it --net=host --ipc=host ingot/turtlebot2-ros-iron:desktop`
@@ -53,6 +51,24 @@ If you want to interact with the Kobuki base without bringing up the full Turtle
 
 Note that for MacOS environment, you'll need to add the flag `--platform linux/amd64` for all docker commands to specify non-arm variant
 
+## ROS2 node architecture
+
+One action is resposible for receiving a goal and calculating the intermediate points (assuming a flat work surface) and control feedback. It reads position data from a topic (#TODO) published by the robot (50 Hz), and publishes to cmd_vel.
+
+Another node will interface the latter with the rest of the ROS2 system. As a service server, it recieves the ID of the point it needs to go [^1]. This service immediately answers with an ACK, and sends the actual GoalPose to the action. When the trajectory is done, it acts as a service client and informs the coordinator.
+
+This node will also be responsible for demanding a unique ID for the turtle on startup, sending a request to a server on the coordinator. It will pass down this to the action. It could also save it on a file. We could also make a startup script that passes a hardcoded ID as an argument for every process.
+
+The details should be all described and function with ROS2 interfaces and graphs for the final release.
+
+[^1]: Since we only have a limited set of desired end positions (2 on each side), this will be abstracted away and stored on a lookup table.
+
+### Implementation
+
+ROS2 has a feature called "composition". This allowes multiple talkers, listeners, servers and clients. Notably, actions are not supported, the easiest solution found is to first get turtle_id, then to call the system shell to launch another ros2 process with the action and the necessary node name remapping. This solution is by no means good practice, but it gets the job done for a beginner.
+
 ## Future Work
 
 The Kinect camera is not yet tested. Ideally, this should be able to run on a Raspberry Pi 3 (1GiB, 16GiB).
+
+Compile all of this for the RaspberryPi. We had difficulties to the Docker build]process requires a lot of compute and memory resources that seem to be impossible with only 1 GiB of RAM. Cross compilation is complicated and would already add more auto-learning time to the project.
