@@ -19,8 +19,9 @@ public:
   explicit NavigationActionClient(const rclcpp::NodeOptions &options)
       : Node("navigation_action_client", options) {
     this->client_ptr_ =
-        rclcpp_action::create_client<UsineGoalPose>(this, "navigation");
+        rclcpp_action::create_client<UsineGoalPose>(this, "navigation_3");
 
+    // TODO get turtle_id from env
     auto timer_callback_lambda = [this]() { return this->send_goal(); };
     this->timer_ = this->create_wall_timer(std::chrono::milliseconds(500),
                                            timer_callback_lambda);
@@ -39,11 +40,25 @@ public:
     }
 
     auto goal_msg = UsineGoalPose::Goal();
-    goal_msg.x_goal_pose = 10;
+    char* env_p = std::getenv("X_GOAL_POSE");
+    if(!env_p){
+      RCLCPP_ERROR(this->get_logger(), "X_GOAL_POSE not defined");
+    } else {
+      goal_msg.x_goal_pose = std::atof(env_p);
+    }
+
     goal_msg.y_goal_pose = 10;
     goal_msg.theta_goal_pose = 10;
 
-    RCLCPP_INFO(this->get_logger(), "Sending goal");
+    std::stringstream ss;
+    ss << "Sending goal: (";
+    ss << goal_msg.x_goal_pose;
+    ss << ", ";
+    ss << goal_msg.y_goal_pose;
+    ss << ", ";
+    ss << goal_msg.theta_goal_pose;
+    ss << ")";
+    RCLCPP_INFO(this->get_logger(), ss.str().c_str());
 
     auto send_goal_options =
         rclcpp_action::Client<UsineGoalPose>::SendGoalOptions();

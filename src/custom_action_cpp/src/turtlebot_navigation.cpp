@@ -171,6 +171,6 @@ int main(int argc, char **argv)
   // send sequest to manager
   notify_turtle_arrival();
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+  std::this_thread::sleep_for(std::chrono::seconds(3000));
   shutdown(thread_server);
 }
