@@ -66,12 +66,17 @@ install(TARGETS
 
 # SERVER
 add_executable(turtlebot_navigation_server src/turtlebot_navigation.cpp)
-ament_target_dependencies(turtlebot_navigation_server rclcpp example_interfaces)
+ament_target_dependencies(turtlebot_navigation_server
+  "rclcpp"
+  "example_interfaces"
+  "custom_action_interfaces"
+)
 
 install(TARGETS
     turtlebot_navigation_server
   DESTINATION lib/${PROJECT_NAME})
 
+# Boilerplate
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

@@ -1,5 +1,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "example_interfaces/srv/add_two_ints.hpp"
+#include "custom_action_interfaces/action/usine_goal_pose.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -8,6 +9,7 @@
 #include <cstdlib>
 #include <iostream>
 
+using UsineGoalPose = custom_action_interfaces::action::UsineGoalPose;
 using namespace std::chrono_literals;
 
 void treat_trajectory_request(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> request,
@@ -142,6 +144,29 @@ bool summon_action(uint16_t turtle_id){
   }
 }
 
+void call_action(uint16_t turtle_id, UsineGoalPose::Goal goal){
+  std::string new_action_name = "navigation_" + std::to_string(turtle_id);
+  std::string new_node_name = "navigation_action_server_" + std::to_string(turtle_id);
+
+  std::string command = "export X_GOAL_POSE=" + std::to_string(goal.x_goal_pose) + " " +
+  "Y_GOAL_POSE=" + std::to_string(goal.y_goal_pose) + " " +
+  "THETA_GOAL_POSE=" + std::to_string(goal.theta_goal_pose) + " " +
+  "TURTLE_ID=" + std::to_string(turtle_id) + "; " +
+  "ros2 run custom_action_cpp navigation_client;";
+
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Command: %s", command.c_str());
+  int returnCode = system(command.c_str());
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+  // checking if the command was executed successfully
+  if (returnCode == 0) {
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Started navigation_client successfully");
+  }
+  else {
+    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Error starting navigation_client");
+  }
+}
+
 void shutdown(std::thread &thread_server){
   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Shutdown rclcpp...");
   rclcpp::shutdown();
@@ -168,6 +193,12 @@ int main(int argc, char **argv)
     shutdown(thread_server);
   };
 
+  auto goal_msg = UsineGoalPose::Goal();
+  goal_msg.x_goal_pose = 3;
+  goal_msg.y_goal_pose = 4;
+  goal_msg.theta_goal_pose = 5;
+
+  call_action(turtle_id, goal_msg);
   // send sequest to manager
   notify_turtle_arrival();
 
