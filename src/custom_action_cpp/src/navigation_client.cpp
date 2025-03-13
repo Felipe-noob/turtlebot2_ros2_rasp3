@@ -40,15 +40,9 @@ public:
     }
 
     auto goal_msg = UsineGoalPose::Goal();
-    char* env_p = std::getenv("X_GOAL_POSE");
-    if(!env_p){
-      RCLCPP_ERROR(this->get_logger(), "X_GOAL_POSE not defined");
-    } else {
-      goal_msg.x_goal_pose = std::atof(env_p);
-    }
-
-    goal_msg.y_goal_pose = 10;
-    goal_msg.theta_goal_pose = 10;
+    goal_msg.x_goal_pose = get_goal_env("X_GOAL_POSE");
+    goal_msg.y_goal_pose = get_goal_env("Y_GOAL_POSE");
+    goal_msg.theta_goal_pose = get_goal_env("THETA_GOAL_POSE");
 
     std::stringstream ss;
     ss << "Sending goal: (";
@@ -125,6 +119,18 @@ public:
 private:
   rclcpp_action::Client<UsineGoalPose>::SharedPtr client_ptr_;
   rclcpp::TimerBase::SharedPtr timer_;
+
+  float get_goal_env(std::string env_name){
+    float value = 0;
+    char* env_p = std::getenv(env_name.c_str());
+    if(!env_p){
+      RCLCPP_ERROR(this->get_logger(), "%s not defined", env_name.c_str());
+    } else {
+      value = std::atof(env_p);
+    }
+    return value;
+  }
+
 }; // class NavigationActionClient
 
 } // namespace custom_action_cpp
