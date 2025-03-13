@@ -87,10 +87,10 @@ public:
 
 private:
   // Subscription
-  double convert_quaternion(double w) const{
-    return 2*acos(w);
-    // 2*asin(z);
+  double convert_quaternion(double w, double z) const{
+    return 2*asin(z);
   }
+  mutable std::mutex mutex_cycle;
 
   mutable geometry_msgs::msg::Point actual_pose = geometry_msgs::msg::Point();
   void topic_callback(const nav_msgs::msg::Odometry::SharedPtr msg) const
@@ -98,8 +98,13 @@ private:
       actual_pose.x = msg->pose.pose.position.x;
       actual_pose.y = msg->pose.pose.position.y;
       double w = msg->pose.pose.orientation.w;
-      actual_pose.z = convert_quaternion(w);
+      double z = msg->pose.pose.orientation.z;
+
+      actual_pose.z = convert_quaternion(w, z);
       RCLCPP_INFO(this->get_logger(), "Recieved data: (x: %lf, y: %lf, theta: %lf)", actual_pose.x, actual_pose.y, actual_pose.z);
+
+      // allow the calculations to take place
+      mutex_cycle.unlock();
     }
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_;
 
@@ -135,6 +140,7 @@ private:
     // TODO: stop condition
     // TODO: import command from Gabriel
     for (int i = 1; (i < 10) && rclcpp::ok(); ++i) {
+      mutex_cycle.lock();
       // Check if there is a cancel request
       if (goal_handle->is_canceling()) {
         result->x_final_pose = 2002;
@@ -153,18 +159,22 @@ private:
       // TODO: calculate command for next cycle
 
       // Send action feedback
-      feedback->x_current_pose = 3;
-      feedback->y_current_pose = 3;
-      feedback->theta_current_pose = 3;
+      feedback->x_current_pose = actual_pose.x;
+      feedback->y_current_pose = actual_pose.y;
+      feedback->theta_current_pose = actual_pose.z;
+
       feedback->x_intermediate_goal_pose = 3;
       feedback->y_intermediate_goal_pose = 3;
       feedback->theta_intermediate_goal_pose = 3;
+
       feedback->x_speed = 3;
       feedback->y_speed = 3;
       feedback->theta_speed = 3;
+
       feedback->x_error_pose = 3;
       feedback->y_error_pose = 3;
       feedback->theta_error_pose = 3;
+
       feedback->x_error_speed = 3;
       feedback->y_error_speed = 3;
       feedback->theta_error_speed = 3;
