@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include <math.h>
+#include <cmath>
 
 //#include "rclcpp/rclcpp.hpp"
 //#include "geometry_msgs/msg/twist.hpp"
@@ -14,140 +14,197 @@ using namespace std::chrono_literals;
 
 struct GenerationTrajectoireBlock{
     //Inputs
-    float p0;
-    float pf;
-    float v0;
-    float vf;
-    float t0;
-    float tf;
+    double p0;
+    double pf;
+    double v0;
+    double vf;
+    double t0;
+    double tf;
   
     //Outputs
-    float q;
-    float dq;
+    double q;
+    double dq;
   };
 
 struct ReferenceChangeBlock{
     //Inputs
-    float x;        // [m]
-    float y;        // [m]
-    float theta;    // [rad ?]
+    double x;        // [m]
+    double y;        // [m]
+    double theta;    // [rad ?]
   
     //Outputs
-    float x_head;        // [m]
-    float y_head;        // [m]
-    float theta_head;    // [rad ?]
+    double x_head;        // [m]
+    double y_head;        // [m]
+    double theta_head;    // [rad ?]
 };
 
 struct RobotParamater{
-    float Km;       // Static Gain [m*s*V]
-    float tau;      // Time constant [s]
-    float R;        // Turtlebot base radius [m]
-};
+    double Km;       // Static Gain [m*s*V]
+    double tau;      // Time constant [s]
+    double R;        // Turtlebot base radius [m]
 
-struct SpeedConverterBlock{
-
-    // inputs
-    float v_rigth;  //  [m/s]
-    float v_left;   //  [m/s]
-    
-    // outputs
-    float v;        // [m/s]
-    float w;        // [rad/s]
-
+    double V_max;
+    double W_max;
 };
 
 struct GainSpeedBlock{
 
     // inputs
-    float v_desired;
-    float w_desired;
+    double v_desired;
+    double w_desired;
 
     // Gains
-    float pre_gain_v = 1.25;    // == 1 / 0.8
-    float pre_gain_w = 1.11;    // == 1 / 0.9 
+    double pre_gain_v = 1.25;    // == 1 / 0.8
+    double pre_gain_w = 1.11;    // == 1 / 0.9 
 
     // outputs
-    float v_turtle;
-    float w_turtle;
+    double v_turtle;
+    double w_turtle;
 
 };
 
 struct TurtlebotBlock{
 
     // input
-    float v_turtle;
-    float w_turtle;
-    float theta;
+    double v_turtle;
+    double w_turtle;
+    double theta;
 
     //output
-    float dx;
-    float dy;
-    float dtheta;
+    double dx;
+    double dy;
+    double dtheta;
+};
+
+struct TurtlebotReal{
+
+   // input
+   double v_turtle;
+   double w_turtle;
+
+   //output
+   double x;
+   double y;
+   double theta;
+};
+
+struct SaturationBlock
+{
+    // input
+    double ux;
+    double uy;
+
+    // saturation condition
+    // if | u | > k_sat * V_max, u = V_max * sig(u) * k_sat
+
+    double k_sat ;
+
+    // output
+
+    double ux_sat;
+    double uy_sat;
+
 };
 
 struct M_inverseBlock{
 
     // input
-    float ux;
-    float uy;
-    float theta;
+    double ux;
+    double uy;
+    double theta;
 
     //output
-    float v_desired;
-    float w_desired;
+    double v_desired;
+    double w_desired;
 
 };
 
 struct IntegratorBlock
 {
     // input
-    float dx;
-    float dy;
-    float dtheta;
+    double dx;
+    double dy;
+    double dtheta;
 
     // initial_cond
-    float initial_x = 0;
-    float initial_y = 0;
-    float initial_theta = 0;
+    double initial_x = 0;
+    double initial_y = 0;
+    double initial_theta = 0;
 
     // output
-    float x;
-    float y;
-    float theta;
+    double x;
+    double y;
+    double theta;
 };
 
 struct CommandBlock{
 
     // inputs
-    float x_ref;
-    float y_ref;
+    double x_ref;
+    double y_ref;
 
-    float dx_ref;
-    float dy_ref;
+    double dx_ref;
+    double dy_ref;
 
-    float x_head;
-    float y_head;
+    double x_head;
+    double y_head;
 
     // outputs
 
-    float ux;
-    float uy;
+    double ux;
+    double uy;
 
 };
 
-void update_CommandBlock(struct CommandBlock &bloque, float gain_K){
+int sign(double x){
+
+    if (x < 0) {
+        return -1;
+    } 
+    else {
+        return 1;
+    }
+   
+}
+
+void update_CommandBlock(struct CommandBlock &bloque, double gain_K){
 
     bloque.ux = gain_K * (bloque.x_ref - bloque.x_head) + bloque.dx_ref;
     bloque.uy = gain_K * (bloque.y_ref - bloque.y_head) + bloque.dy_ref;
 }
 
-void update_integrator(struct IntegratorBlock &bloque, float dt){
+void update_SaturationBlock(struct SaturationBlock &bloque, struct RobotParamater &param){
 
-    static float somme_x = bloque.initial_x; 
-    static float somme_y = bloque.initial_y; 
-    static float somme_theta = bloque.initial_theta;
+    double ux = bloque.ux;
+    double uy = bloque.uy;
+    double ux_sat = 0, uy_sat = 0;
+
+    if (abs(ux) > 0.5f * param.V_max){
+        ux_sat = param.V_max * sign(ux) * bloque.k_sat;
+    } 
+    else {
+        ux_sat = ux;
+    }
+
+    if (abs(uy) > 0.5f * param.V_max){
+        uy_sat = param.V_max * sign(uy) * bloque.k_sat;
+    } 
+    else {
+        uy_sat = uy;
+    }
+
+    bloque.ux_sat = ux_sat;
+    bloque.uy_sat = uy_sat;
+
+}
+
+void update_integrator(struct IntegratorBlock &bloque, double dt){
+
+    static double somme_x = bloque.initial_x; 
+    static double somme_y = bloque.initial_y; 
+    static double somme_theta = bloque.initial_theta;
     static bool firstCall = true;
-    static float last_dx = 0, last_dy = 0, last_dtheta = 0; 
+    static double last_dx = 0, last_dy = 0, last_dtheta = 0; 
 
     if(firstCall){
         last_dx = bloque.dx;
@@ -180,7 +237,7 @@ void update_TurtlebotBlock(struct TurtlebotBlock &bloque){
 
 void update_M_inverseBlock(struct M_inverseBlock &bloque,struct RobotParamater &param){
     
-    float M_inv[2][2] = {
+    double M_inv[2][2] = {
         {cos(bloque.theta),sin(bloque.theta)},
         {(-1/param.R) * sin(bloque.theta),(1/param.R) * cos(bloque.theta)}
     }; 
@@ -198,10 +255,10 @@ void update_GainSpeedBlock(struct GainSpeedBlock &bloque){
 
 }
 
-void update_TrajectoryOutput(struct GenerationTrajectoireBlock &bloque, float time_current){
+void update_TrajectoryOutput(struct GenerationTrajectoireBlock &bloque, double time_current){
 
-    static float a[4];
-    float lambda;
+    static double a[4];
+    double lambda;
 
     a[3] = ((bloque.vf - bloque.v0)*(bloque.tf - bloque.t0)) - (2*(bloque.pf - bloque.p0)-(2*bloque.v0*(bloque.tf - bloque.t0)));
     a[2] = (bloque.pf - bloque.p0) - bloque.v0*(bloque.tf - bloque.t0) - a[3];
@@ -209,8 +266,8 @@ void update_TrajectoryOutput(struct GenerationTrajectoireBlock &bloque, float ti
     a[0] = bloque.p0;
 
     lambda = (time_current - bloque.t0)/(bloque.tf - bloque.t0);
-    float lambda_2 = lambda*lambda;
-    float lambda_3 = lambda * lambda_2;
+    double lambda_2 = lambda*lambda;
+    double lambda_3 = lambda * lambda_2;
 
     if(time_current < bloque.tf){
         bloque.q = a[0] + a[1]*lambda + a[2]*lambda_2 + a[3]*lambda_3;
@@ -230,15 +287,8 @@ void update_CoordsHead(struct ReferenceChangeBlock &bloque, struct RobotParamate
 
 }
 
-void convert_speed(struct SpeedConverterBlock &bloque, struct RobotParamater &param){
-
-    bloque.v = (bloque.v_rigth + bloque.v_left)/2;
-    bloque.w = (bloque.v_rigth - bloque.v_left)/(2*param.R);
-
-}
-
-float convert_degrees2radians(float degrees){
-   float radians;
+double convert_degrees2radians(double degrees){
+   double radians;
     return radians = (degrees*2*M_PI)*360; 
 }
 
@@ -247,27 +297,26 @@ int main(int argv, char *argc []){
     // Blocks definition
     struct GenerationTrajectoireBlock block_trajectory_X = {.p0 = 0, .pf = 10, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
     struct GenerationTrajectoireBlock block_trajectory_Y = {.p0 = 0, .pf = 5, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
-
-    struct CommandBlock command_block = {};
-    struct M_inverseBlock inverse_matrix_block = {};
-    struct GainSpeedBlock gain_speed_block = {};
-
-    struct TurtlebotBlock turtlebot2 = {};
-    struct IntegratorBlock itegrator_block = {};
     struct ReferenceChangeBlock reference_change_block = {};
+    struct GainSpeedBlock gain_speed_block = {};
+    struct M_inverseBlock inverse_matrix_block = {};
+    struct IntegratorBlock itegrator_block = {};
+    struct CommandBlock command_block = {};
     
-    // Robot's structs
-    struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 0.17};
-  
-    float t = 0;
-    float t_current;
-    float delta = 0.1;
 
-    for(t = 0; t < 10; t = t + delta){
+    // Robot's structs
+    struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025f, .R = 0.17f, .V_max = 0.7f, .W_max = M_PI};
+    struct TurtlebotBlock turtlebot2 = {};
+  
+    double t_current;
+    double t;
+    double delta = 0.1;
+
+    for(t = 0; t < 20; t = t + delta){
 
         t_current = t_current + delta; 
 
-        if(t > 5){
+        if(t > 10){
 
             block_trajectory_X.t0 = 0;
             block_trajectory_X.tf = 5;

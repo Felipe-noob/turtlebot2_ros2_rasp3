@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include <math.h>
+#include <cmath>
 
 //#include "rclcpp/rclcpp.hpp"
 //#include "geometry_msgs/msg/twist.hpp"
@@ -42,18 +42,9 @@ struct RobotParamater{
     float Km;       // Static Gain [m*s*V]
     float tau;      // Time constant [s]
     float R;        // Turtlebot base radius [m]
-};
 
-struct SpeedConverterBlock{
-
-    // inputs
-    float v_rigth;  //  [m/s]
-    float v_left;   //  [m/s]
-    
-    // outputs
-    float v;        // [m/s]
-    float w;        // [rad/s]
-
+    float V_max;
+    float W_max;
 };
 
 struct GainSpeedBlock{
@@ -83,6 +74,36 @@ struct TurtlebotBlock{
     float dx;
     float dy;
     float dtheta;
+};
+
+struct TurtlebotReal{
+
+   // input
+   float v_turtle;
+   float w_turtle;
+
+   //output
+   float x;
+   float y;
+   float theta;
+};
+
+struct SaturationBlock
+{
+    // input
+    float ux;
+    float uy;
+
+    // saturation condition
+    // if | u | > k_sat * V_max, u = V_max * sig(u) * k_sat
+
+    float k_sat ;
+
+    // output
+
+    float ux_sat;
+    float uy_sat;
+
 };
 
 struct M_inverseBlock{
@@ -122,6 +143,9 @@ struct CommandBlock{
     float x_ref;
     float y_ref;
 
+    float dx_ref;
+    float dy_ref;
+
     float x_head;
     float y_head;
 
@@ -132,10 +156,46 @@ struct CommandBlock{
 
 };
 
+int sign(float x){
+
+    if (x < 0) {
+        return -1;
+    } 
+    else {
+        return 1;
+    }
+   
+}
+
 void update_CommandBlock(struct CommandBlock &bloque, float gain_K){
 
-    bloque.ux = gain_K * (bloque.x_ref - bloque.x_head) ;
-    bloque.uy = gain_K * (bloque.y_ref - bloque.y_head) ;
+    bloque.ux = gain_K * (bloque.x_ref - bloque.x_head) + bloque.dx_ref;
+    bloque.uy = gain_K * (bloque.y_ref - bloque.y_head) + bloque.dy_ref;
+}
+
+void update_SaturationBlock(struct SaturationBlock &bloque, struct RobotParamater &param){
+
+    float ux = bloque.ux;
+    float uy = bloque.uy;
+    float ux_sat = 0, uy_sat = 0;
+
+    if (abs(ux) > 0.5f * param.V_max){
+        ux_sat = param.V_max * sign(ux) * bloque.k_sat;
+    } 
+    else {
+        ux_sat = ux;
+    }
+
+    if (abs(uy) > 0.5f * param.V_max){
+        uy_sat = param.V_max * sign(uy) * bloque.k_sat;
+    } 
+    else {
+        uy_sat = uy;
+    }
+
+    bloque.ux_sat = ux_sat;
+    bloque.uy_sat = uy_sat;
+
 }
 
 void update_integrator(struct IntegratorBlock &bloque, float dt){
@@ -227,13 +287,6 @@ void update_CoordsHead(struct ReferenceChangeBlock &bloque, struct RobotParamate
 
 }
 
-void convert_speed(struct SpeedConverterBlock &bloque, struct RobotParamater &param){
-
-    bloque.v = (bloque.v_rigth + bloque.v_left)/2;
-    bloque.w = (bloque.v_rigth - bloque.v_left)/(2*param.R);
-
-}
-
 float convert_degrees2radians(float degrees){
    float radians;
     return radians = (degrees*2*M_PI)*360; 
@@ -244,7 +297,6 @@ int main(int argv, char *argc []){
     // Blocks definition
     struct GenerationTrajectoireBlock block_trajectory = {.p0 = 0, .pf = 10, .v0 = 0, .vf = 0, .t0 = 0, .tf = 5, .q = 0, .dq = 0};
     struct ReferenceChangeBlock reference_change_block = {};
-    struct SpeedConverterBlock speed_converter_block = {};
     struct GainSpeedBlock gain_speed_block = {};
     struct M_inverseBlock inverse_matrix_block = {};
     struct IntegratorBlock itegrator_block = {};
@@ -252,7 +304,7 @@ int main(int argv, char *argc []){
     
 
     // Robot's structs
-    struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025, .R = 0.17};
+    struct RobotParamater robot_paramaters = {.Km = 1, .tau = 0.025f, .R = 0.17f, .V_max = 0.7f, .W_max = M_PI};
     struct TurtlebotBlock turtlebot2 = {};
   
     float i = 0;
