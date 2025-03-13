@@ -12,11 +12,11 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
+#include "control_system.hpp"
 #include "custom_action_cpp/visibility_control.h"
 #include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-#include "control_system.hpp"
 #include "navigation.hpp"
 
 using namespace std::chrono_literals;
@@ -149,23 +149,49 @@ private:
       }
 
       // TODO: calculate command for next cycle
-      auto t_current = since(start).count();
 
+      auto wps = get_waypoints(goal->current_position, goal->goal_position);
+      double x_wp = 0;
+      double y_wp = 0;
+
+      // Blocks definition
+
+      for (const auto &wp : wps) {
+        x = wp[0];
+        y = wp[1];
+        struct GenerationTrajectoireBlock block_trajectory_Y = {
+            .p0 = actual_pose.x,
+            .pf = 5,
+            .v0 = 0,
+            .vf = 0,
+            .t0 = 0,
+            .tf = 5,
+            .q = 0,
+            .dq = 0};
+        struct GenerationTrajectoireBlock block_trajectory_X = {.p0 =,
+                                                                .pf = 10,
+                                                                .v0 = 0,
+                                                                .vf = 0,
+                                                                .t0 = 0,
+                                                                .tf = 5,
+                                                                .q = 0,
+                                                                .dq = 0};
+      }
       // update_TrajectoryOutput(block_trajectory_X,t_current);
+      auto t_current = since(start).count();
       // update_TrajectoryOutput(block_trajectory_Y,t_current);
 
       // Send command to motors
       send_command();
-
 
       // Send action feedback
       feedback->x_current_pose = actual_pose.x;
       feedback->y_current_pose = actual_pose.y;
       feedback->theta_current_pose = actual_pose.z;
 
-      feedback->x_intermediate_goal_pose = 3;
-      feedback->y_intermediate_goal_pose = 3;
-      feedback->theta_intermediate_goal_pose = 3;
+      feedback->x_intermediate_goal_pose = x_wp;
+      feedback->y_intermediate_goal_pose = y_wp;
+      feedback->theta_intermediate_goal_pose = 3; // TODO: delete!
 
       feedback->x_speed = 3;
       feedback->y_speed = 3;
