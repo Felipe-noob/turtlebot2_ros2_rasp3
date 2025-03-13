@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include "control_system.hpp"
+#include "navigation.hpp"
 
 
 //#include "rclcpp/rclcpp.hpp"
@@ -34,6 +35,15 @@ int main(int argv, char *argc []){
     double t_current;
     double t;
     double delta = 0.1;
+
+    /*
+    auto wps = get_waypoints(1, 3);
+
+    std::cout << "Waypoints intermediarios entre " << 1 << " e " << 3 << ":\n";
+    for (const auto& wp : wps) {
+        std::cout << "X: " << wp[0] << ", Y: " << wp[1] << "\n";
+    }
+    */
 
     for(t = 0; t < 20; t = t + delta){
 
