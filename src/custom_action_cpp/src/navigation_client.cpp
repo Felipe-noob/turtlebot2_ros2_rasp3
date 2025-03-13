@@ -16,10 +16,23 @@ public:
   using UsineGoalPose = custom_action_interfaces::action::UsineGoalPose;
   using GoalHandleNavigation = rclcpp_action::ClientGoalHandle<UsineGoalPose>;
 
+  // WARNING if TURTLE_ID is not set, it segfaults
   explicit NavigationActionClient(const rclcpp::NodeOptions &options)
-      : Node("navigation_action_client", options) {
+      : Node("navigation_action_client_" + std::to_string(std::atoi(std::getenv("TURTLE_ID"))), options) {
+
+    uint16_t turtle_id;
+    {
+      char* env_p = std::getenv("TURTLE_ID");
+      if(!env_p){
+        RCLCPP_ERROR(this->get_logger(), "TURTLE_ID not defined");
+      } else {
+        turtle_id = std::atoi(env_p);
+      }
+    }
+    RCLCPP_INFO(this->get_logger(), "Read turtle_id=%d", turtle_id);
+
     this->client_ptr_ =
-        rclcpp_action::create_client<UsineGoalPose>(this, "navigation_3");
+      rclcpp_action::create_client<UsineGoalPose>(this, "navigation_" + std::to_string(turtle_id));
 
     // TODO get turtle_id from env
     auto timer_callback_lambda = [this]() { return this->send_goal(); };
