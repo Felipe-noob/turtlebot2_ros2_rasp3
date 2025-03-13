@@ -5,6 +5,9 @@
 #include <cstdlib>
 #include <memory>
 
+#include <cstdlib>
+#include <iostream>
+
 using namespace std::chrono_literals;
 
 void treat_trajectory_request(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> request,
@@ -108,6 +111,33 @@ void server(uint16_t turtle_id){
   rclcpp::shutdown();
 }
 
+/**
+ * Run the action server without blocking the main thread
+ */
+bool summon_action(uint16_t turtle_id){
+  int returnCode = system("ros2 run custom_action_cpp navigation_server &");
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+  // checking if the command was executed successfully
+  if (returnCode == 0) {
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Started navigation_server successfully");
+    return true;
+  }
+  else {
+    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Error starting navigation_server");
+    return false;
+  }
+}
+
+void shutdown(std::thread &thread_server){
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Shutdown rclcpp...");
+  rclcpp::shutdown();
+  thread_server.join();
+  // end action server
+  system("pkill -n navigation_s");
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Exiting...");
+}
+
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
@@ -120,13 +150,14 @@ int main(int argc, char **argv)
   // Wait for thread to come online. I could use a variable for this instead
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-  // TODO: call the action
+  // TODO: call the action, copy code from navigation_client or call it from the shell too
+  if(!summon_action(turtle_id)){
+    shutdown(thread_server);
+  };
 
   // send sequest to manager
   notify_turtle_arrival();
 
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Shutdown rclcpp...");
-  rclcpp::shutdown();
-  thread_server.join();
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Exiting...");
+  std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+  shutdown(thread_server);
 }
