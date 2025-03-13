@@ -152,19 +152,30 @@ void call_action(uint16_t turtle_id, UsineGoalPose::Goal goal){
   "Y_GOAL_POSE=" + std::to_string(goal.y_goal_pose) + " " +
   "THETA_GOAL_POSE=" + std::to_string(goal.theta_goal_pose) + " " +
   "TURTLE_ID=" + std::to_string(turtle_id) + "; " +
-  "ros2 run custom_action_cpp navigation_client;";
+  "ros2 run custom_action_cpp navigation_client 2>&1";
 
   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Command: %s", command.c_str());
-  int returnCode = system(command.c_str());
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-  // checking if the command was executed successfully
-  if (returnCode == 0) {
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Started navigation_client successfully");
-  }
-  else {
-    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Error starting navigation_client");
-  }
+  std::array<char, 256> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
+
+    if (!pipe) {
+        throw std::runtime_error("Error opening pipe!");
+    }
+
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+      std::string line(buffer.data());
+
+      // Redirect everything to the terminal
+      std::cout << line;
+
+      // Verifica se a linha contém a string desejada
+      if (line.find("Result") != std::string::npos) {
+        result = line;
+      }
+    }
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "RECIEVED RESULT: %s", result.c_str());
 }
 
 void shutdown(std::thread &thread_server){
