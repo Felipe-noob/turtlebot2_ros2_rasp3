@@ -1,5 +1,4 @@
 #include "rclcpp/rclcpp.hpp"
-#include "example_interfaces/srv/add_two_ints.hpp"
 #include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "turtle_interface/srv/turtle_move.hpp"
 #include "coordinator_interface/srv/notify_turtle_arrival.hpp"
@@ -20,23 +19,24 @@ std::mutex mutex_in_trajectory;
 bool in_trajectory = false;
 auto goal_msg = UsineGoalPose::Goal();
 
-void treat_trajectory_request(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> request,
-          std::shared_ptr<example_interfaces::srv::AddTwoInts::Response>      response)
+void treat_trajectory_request(const std::shared_ptr<turtle_interface::srv::TurtleMove::Request> request,
+          std::shared_ptr<turtle_interface::srv::TurtleMove::Response>      response)
 {
-  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Incoming request\na: %ld" " b: %ld",
-                request->a, request->b);
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Incoming request\nturtle_id: %d" " turtle_position: %d",
+                request->turtle_id, request->turtle_position);
 
   if(in_trajectory){
     // reject the demand
-    response->sum=0;
+    response->ack = 1; // TODO see André error codes
   } else {
+    // TODO read position from lookup table
     goal_msg.x_goal_pose = 3;
     goal_msg.y_goal_pose = 4;
     goal_msg.theta_goal_pose = 5;
-    response->sum=1;
+    response->ack=0; //TODO see code for OK
     mutex_in_trajectory.unlock();
   }
-  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "sending back response: [%ld]", (long int)response->sum);
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "sending back response: [%ld]", (long int)response->ack);
 }
 
 /**
@@ -70,7 +70,7 @@ uint16_t notify_turtle_initial_position() {
   if (rclcpp::spin_until_future_complete(node, result) ==
     rclcpp::FutureReturnCode::SUCCESS)
   {
-    RCLCPP_INFO(rclcpp::get_logger(node_name.c_str()), "Sum: %ld", result.get()->turtle_id);
+    RCLCPP_INFO(rclcpp::get_logger(node_name.c_str()), "Sum: %d", result.get()->turtle_id);
   } else {
     RCLCPP_ERROR(rclcpp::get_logger(node_name.c_str()), "Failed to call service add_two_ints");
   }
@@ -80,19 +80,19 @@ uint16_t notify_turtle_initial_position() {
 
 /**
  * @description Inform manager that the trajectory is over
- * TODO: call actual service, this is a mock
  */
-bool notify_turtle_arrival(uint16_t turtle_id, UsineGoalPose::Result final_pose) {
+uint32_t notify_turtle_arrival(uint16_t turtle_id, UsineGoalPose::Result final_pose) {
   return true;
-  // TODO test if node already exists before trying to create it
+  // TODO Verify actual service name
   std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("add_two_ints_client");
-  rclcpp::Client<example_interfaces::srv::AddTwoInts>::SharedPtr client =
-    node->create_client<example_interfaces::srv::AddTwoInts>("add_two_ints");
+  rclcpp::Client<coordinator_interface::srv::NotifyTurtleArrival>::SharedPtr client =
+    node->create_client<coordinator_interface::srv::NotifyTurtleArrival>("add_two_ints");
 
-  // TODO NotifyTurtleArrival
-  auto request = std::make_shared<example_interfaces::srv::AddTwoInts::Request>();
-  request->a = 0;
-  request->b = 0;
+  auto request = std::make_shared<coordinator_interface::srv::NotifyTurtleArrival::Request>();
+  request->turtle_id = turtle_id;
+  request->turtle_position = 0; // TODO: implement LUT
+  request->x_turtle = final_pose.x_final_pose;
+  request->y_turtle = final_pose.y_final_pose;
 
   while (!client->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
@@ -107,22 +107,22 @@ bool notify_turtle_arrival(uint16_t turtle_id, UsineGoalPose::Result final_pose)
   if (rclcpp::spin_until_future_complete(node, result) ==
     rclcpp::FutureReturnCode::SUCCESS)
   {
-    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Sum: %ld", result.get()->sum);
+    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Sum: %d", result.get()->ack);
   } else {
     RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Failed to call service add_two_ints");
   }
 
-  return result.get()->sum;
+  return result.get()->ack;
 }
 
 void server(uint16_t turtle_id){
   std::string node_name = "turtlebot_navigation_server_" + std::to_string(turtle_id);
-  std::string service_name = "turtlebot_navigation_" + std::to_string(turtle_id);
+  std::string service_name = "TurtleMove" + std::to_string(turtle_id);
 
   std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared(node_name);
 
-  rclcpp::Service<example_interfaces::srv::AddTwoInts>::SharedPtr service =
-    node->create_service<example_interfaces::srv::AddTwoInts>(service_name, &treat_trajectory_request);
+  rclcpp::Service<turtle_interface::srv::TurtleMove>::SharedPtr service =
+    node->create_service<turtle_interface::srv::TurtleMove>(service_name, &treat_trajectory_request);
 
   RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Ready to perform a trajectory.");
 
