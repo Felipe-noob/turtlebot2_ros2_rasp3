@@ -3,8 +3,8 @@
 <package format="3">
   <name>custom_action_interfaces</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="root@todo.todo">root</maintainer>
+  <description>Define interfaces for controlling the turtlebot trajectory</description>
+  <maintainer email="felipelorenzzon@gmail.com">Felipe Lorenzzon</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
