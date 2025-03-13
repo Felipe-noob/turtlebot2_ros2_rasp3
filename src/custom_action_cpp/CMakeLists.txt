@@ -19,6 +19,8 @@ find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rcl_interfaces REQUIRED)
 find_package(example_interfaces REQUIRED)
+find_package(turtle_interface REQUIRED)
+find_package(coordinator_interface REQUIRED)
 
 # SERVER
 add_library(action_server SHARED
