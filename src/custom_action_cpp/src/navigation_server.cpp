@@ -146,7 +146,6 @@ private:
       // TODO: calculate command for next cycle
 
       // Send action feedback
-      auto start = std::chrono::steady_clock::now();
       feedback->x_current_pose = 3;
       feedback->y_current_pose = 3;
       feedback->theta_current_pose = 3;
@@ -164,7 +163,6 @@ private:
       feedback->theta_error_speed = 3;
 
       goal_handle->publish_feedback(feedback);
-      std::cout << "Elapsed(ms)=" << since(start).count() << std::endl;
       RCLCPP_INFO(this->get_logger(), "Publish feedback");
       loop_rate.sleep();
     }

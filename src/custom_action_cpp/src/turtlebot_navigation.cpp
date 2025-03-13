@@ -12,13 +12,27 @@
 using UsineGoalPose = custom_action_interfaces::action::UsineGoalPose;
 using namespace std::chrono_literals;
 
+std::mutex mutex_in_trajectory;
+
+bool in_trajectory = false;
+auto goal_msg = UsineGoalPose::Goal();
+
 void treat_trajectory_request(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> request,
           std::shared_ptr<example_interfaces::srv::AddTwoInts::Response>      response)
 {
-  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Waiting for request...");
-  response->sum = request->a + request->b;
   RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Incoming request\na: %ld" " b: %ld",
                 request->a, request->b);
+
+  if(in_trajectory){
+    // reject the demand
+    response->sum=0;
+  } else {
+    goal_msg.x_goal_pose = 3;
+    goal_msg.y_goal_pose = 4;
+    goal_msg.theta_goal_pose = 5;
+    response->sum=1;
+    mutex_in_trajectory.unlock();
+  }
   RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "sending back response: [%ld]", (long int)response->sum);
 }
 
@@ -104,7 +118,7 @@ void server(uint16_t turtle_id){
   std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared(node_name);
 
   rclcpp::Service<example_interfaces::srv::AddTwoInts>::SharedPtr service =
-    node->create_service<example_interfaces::srv::AddTwoInts>("service_name", &treat_trajectory_request);
+    node->create_service<example_interfaces::srv::AddTwoInts>(service_name, &treat_trajectory_request);
 
   RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Ready to perform a trajectory.");
 
@@ -152,13 +166,13 @@ std::vector<std::string> split(const std::string& s)
     return words;
 }
 
-UsineGoalPose::Result call_action(uint16_t turtle_id, UsineGoalPose::Goal goal){
+UsineGoalPose::Result call_action(uint16_t turtle_id){
   std::string new_action_name = "navigation_" + std::to_string(turtle_id);
   std::string new_node_name = "navigation_action_server_" + std::to_string(turtle_id);
 
-  std::string command = "export X_GOAL_POSE=" + std::to_string(goal.x_goal_pose) + " " +
-  "Y_GOAL_POSE=" + std::to_string(goal.y_goal_pose) + " " +
-  "THETA_GOAL_POSE=" + std::to_string(goal.theta_goal_pose) + " " +
+  std::string command = "export X_GOAL_POSE=" + std::to_string(goal_msg.x_goal_pose) + " " +
+  "Y_GOAL_POSE=" + std::to_string(goal_msg.y_goal_pose) + " " +
+  "THETA_GOAL_POSE=" + std::to_string(goal_msg.theta_goal_pose) + " " +
   "TURTLE_ID=" + std::to_string(turtle_id) + "; " +
   "ros2 run custom_action_cpp navigation_client 2>&1";
 
@@ -215,6 +229,7 @@ void shutdown(std::thread &thread_server){
 
 int main(int argc, char **argv)
 {
+  mutex_in_trajectory.lock();
   rclcpp::init(argc, argv);
 
   RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Fetching turtle_id");
@@ -229,15 +244,15 @@ int main(int argc, char **argv)
     shutdown(thread_server);
   };
 
-  auto goal_msg = UsineGoalPose::Goal();
-  goal_msg.x_goal_pose = 3;
-  goal_msg.y_goal_pose = 4;
-  goal_msg.theta_goal_pose = 5;
+  while(true){
+    mutex_in_trajectory.lock();
 
-  UsineGoalPose::Result final_pose = call_action(turtle_id, goal_msg);
+    // Demand trajectory to the robot
+    UsineGoalPose::Result final_pose = call_action(turtle_id);
 
-  // send sequest to manager
-  notify_turtle_arrival(turtle_id, final_pose);
+    // send sequest to manager
+    notify_turtle_arrival(turtle_id, final_pose);
+  }
 
   std::this_thread::sleep_for(std::chrono::seconds(3000));
   shutdown(thread_server);
