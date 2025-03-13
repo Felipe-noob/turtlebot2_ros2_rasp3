@@ -1,32 +1,29 @@
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <thread>
-#include <chrono>
 
-#include <string>
+#include <cmath>
 #include <iostream>
 #include <sstream>
-#include <cmath>
+#include <string>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
-#include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "custom_action_cpp/visibility_control.h"
+#include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
 using namespace std::chrono_literals;
 
-template <
-    class result_t   = std::chrono::milliseconds,
-    class clock_t    = std::chrono::steady_clock,
-    class duration_t = std::chrono::milliseconds
->
-auto since(std::chrono::time_point<clock_t, duration_t> const& start)
-{
-    return std::chrono::duration_cast<result_t>(clock_t::now() - start);
+template <class result_t = std::chrono::milliseconds,
+          class clock_t = std::chrono::steady_clock,
+          class duration_t = std::chrono::milliseconds>
+auto since(std::chrono::time_point<clock_t, duration_t> const &start) {
+  return std::chrono::duration_cast<result_t>(clock_t::now() - start);
 }
 
 namespace custom_action_cpp {
@@ -42,16 +39,17 @@ public:
       : Node("navigation_action_server", options) {
     using namespace std::placeholders;
 
-
     // subscribe to odom
     std::string node_name = "odom";
 
     subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      node_name, 10, std::bind(&NavigationActionServer::topic_callback, this, _1));
-      RCLCPP_INFO(this->get_logger(), "Listener on topic /%s", node_name.c_str());
+        node_name, 10,
+        std::bind(&NavigationActionServer::topic_callback, this, _1));
+    RCLCPP_INFO(this->get_logger(), "Listener on topic /%s", node_name.c_str());
 
     // Publish to /cmd_vel
-     publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+    publisher_ =
+        this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
 
     // Navigation Action
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
@@ -82,35 +80,32 @@ public:
 
     this->action_server_ = rclcpp_action::create_server<UsineGoalPose>(
         this, "navigation", handle_goal, handle_cancel, handle_accepted);
-
   }
 
 private:
   // Subscription
-  double convert_quaternion(double z) const{
-    return 2*asin(z);
-  }
+  double convert_quaternion(double z) const { return 2 * asin(z); }
   mutable std::mutex mutex_cycle;
 
   mutable geometry_msgs::msg::Point actual_pose = geometry_msgs::msg::Point();
-  void topic_callback(const nav_msgs::msg::Odometry::SharedPtr msg) const
-    {
-      actual_pose.x = msg->pose.pose.position.x;
-      actual_pose.y = msg->pose.pose.position.y;
-      double z = msg->pose.pose.orientation.z;
+  void topic_callback(const nav_msgs::msg::Odometry::SharedPtr msg) const {
+    actual_pose.x = msg->pose.pose.position.x;
+    actual_pose.y = msg->pose.pose.position.y;
+    double z = msg->pose.pose.orientation.z;
 
-      actual_pose.z = convert_quaternion(z);
-      // RCLCPP_DEBUG(this->get_logger(), "Recieved data: (x: %lf, y: %lf, theta: %lf)", actual_pose.x, actual_pose.y, actual_pose.z);
+    actual_pose.z = convert_quaternion(z);
+    // RCLCPP_DEBUG(this->get_logger(), "Recieved data: (x: %lf, y: %lf, theta:
+    // %lf)", actual_pose.x, actual_pose.y, actual_pose.z);
 
-      // allow the calculations to take place
-      mutex_cycle.unlock();
-    }
+    // allow the calculations to take place
+    mutex_cycle.unlock();
+  }
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_;
 
   // Publisher
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
 
-  void send_command(){
+  void send_command() {
     auto message = geometry_msgs::msg::Twist();
     message.linear.x = 0;
     message.linear.y = 0;
@@ -126,7 +121,6 @@ private:
 
   // Action
   rclcpp_action::Server<UsineGoalPose>::SharedPtr action_server_;
-
 
   void execute(const std::shared_ptr<GoalHandleUsineGoalPose> goal_handle) {
     RCLCPP_INFO(this->get_logger(), "Executing goal");

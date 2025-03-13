@@ -18,12 +18,14 @@ public:
 
   // WARNING if TURTLE_ID is not set, it segfaults
   explicit NavigationActionClient(const rclcpp::NodeOptions &options)
-      : Node("navigation_action_client_" + std::to_string(std::atoi(std::getenv("TURTLE_ID"))), options) {
+      : Node("navigation_action_client_" +
+                 std::to_string(std::atoi(std::getenv("TURTLE_ID"))),
+             options) {
 
     uint16_t turtle_id;
     {
-      char* env_p = std::getenv("TURTLE_ID");
-      if(!env_p){
+      char *env_p = std::getenv("TURTLE_ID");
+      if (!env_p) {
         RCLCPP_ERROR(this->get_logger(), "TURTLE_ID not defined");
       } else {
         turtle_id = std::atoi(env_p);
@@ -31,8 +33,8 @@ public:
     }
     RCLCPP_INFO(this->get_logger(), "Read turtle_id=%d", turtle_id);
 
-    this->client_ptr_ =
-      rclcpp_action::create_client<UsineGoalPose>(this, "navigation_" + std::to_string(turtle_id));
+    this->client_ptr_ = rclcpp_action::create_client<UsineGoalPose>(
+        this, "navigation_" + std::to_string(turtle_id));
 
     // TODO get turtle_id from env
     auto timer_callback_lambda = [this]() { return this->send_goal(); };
@@ -133,10 +135,10 @@ private:
   rclcpp_action::Client<UsineGoalPose>::SharedPtr client_ptr_;
   rclcpp::TimerBase::SharedPtr timer_;
 
-  float get_goal_env(std::string env_name){
+  float get_goal_env(std::string env_name) {
     float value = 0;
-    char* env_p = std::getenv(env_name.c_str());
-    if(!env_p){
+    char *env_p = std::getenv(env_name.c_str());
+    if (!env_p) {
       RCLCPP_ERROR(this->get_logger(), "%s not defined", env_name.c_str());
     } else {
       value = std::atof(env_p);
