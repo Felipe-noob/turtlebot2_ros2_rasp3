@@ -101,7 +101,7 @@ private:
       double z = msg->pose.pose.orientation.z;
 
       actual_pose.z = convert_quaternion(w, z);
-      RCLCPP_INFO(this->get_logger(), "Recieved data: (x: %lf, y: %lf, theta: %lf)", actual_pose.x, actual_pose.y, actual_pose.z);
+      // RCLCPP_DEBUG(this->get_logger(), "Recieved data: (x: %lf, y: %lf, theta: %lf)", actual_pose.x, actual_pose.y, actual_pose.z);
 
       // allow the calculations to take place
       mutex_cycle.unlock();
@@ -143,9 +143,9 @@ private:
       mutex_cycle.lock();
       // Check if there is a cancel request
       if (goal_handle->is_canceling()) {
-        result->x_final_pose = 2002;
-        result->y_final_pose = 2002;
-        result->theta_final_pose = 2002;
+        result->x_final_pose = actual_pose.x;
+        result->y_final_pose = actual_pose.y;
+        result->theta_final_pose = actual_pose.z;
         goal_handle->canceled(result);
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
         return;
@@ -153,8 +153,6 @@ private:
 
       // Send command to motors
       send_command();
-
-      // TODO: read data from robot
 
       // TODO: calculate command for next cycle
 
@@ -181,7 +179,6 @@ private:
 
       goal_handle->publish_feedback(feedback);
       RCLCPP_INFO(this->get_logger(), "Publish feedback");
-      loop_rate.sleep();
     }
 
     // Check if goal is done
