@@ -144,7 +144,15 @@ bool summon_action(uint16_t turtle_id){
   }
 }
 
-void call_action(uint16_t turtle_id, UsineGoalPose::Goal goal){
+std::vector<std::string> split(const std::string& s)
+{
+    std::stringstream ss(s);
+    std::vector<std::string> words;
+    for (std::string w; ss>>w; ) words.push_back(w);
+    return words;
+}
+
+UsineGoalPose::Result call_action(uint16_t turtle_id, UsineGoalPose::Goal goal){
   std::string new_action_name = "navigation_" + std::to_string(turtle_id);
   std::string new_node_name = "navigation_action_server_" + std::to_string(turtle_id);
 
@@ -175,7 +183,25 @@ void call_action(uint16_t turtle_id, UsineGoalPose::Goal goal){
         result = line;
       }
     }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "RECIEVED RESULT: %s", result.c_str());
+    // Separate the line using spaces as a delimitor
+    const std::vector fields = split(result);
+    const int s = fields.size();
+
+    UsineGoalPose::Result final_pose = UsineGoalPose::Result();
+    final_pose.x_final_pose = atof(fields.at(s-3).c_str());
+    final_pose.y_final_pose = atof(fields.at(s-2).c_str());
+    final_pose.theta_final_pose = atof(fields.at(s-1).c_str());
+
+    std::stringstream ss;
+    ss << "Final pose: (";
+    ss << final_pose.x_final_pose;
+    ss << ", ";
+    ss << final_pose.y_final_pose;
+    ss << ", ";
+    ss << final_pose.theta_final_pose;
+    ss << ")";
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), ss.str().c_str());
+  return final_pose;
 }
 
 void shutdown(std::thread &thread_server){
@@ -209,7 +235,8 @@ int main(int argc, char **argv)
   goal_msg.y_goal_pose = 4;
   goal_msg.theta_goal_pose = 5;
 
-  call_action(turtle_id, goal_msg);
+  UsineGoalPose::Result final_pose = call_action(turtle_id, goal_msg);
+
   // send sequest to manager
   notify_turtle_arrival();
 

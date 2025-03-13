@@ -172,8 +172,8 @@ private:
     // Check if goal is done
     if (rclcpp::ok()) {
       result->x_final_pose = 9;
-      result->y_final_pose = 9;
-      result->theta_final_pose = 9;
+      result->y_final_pose = 8;
+      result->theta_final_pose = 7;
       goal_handle->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
     }
