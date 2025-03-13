@@ -15,11 +15,11 @@ using namespace std::chrono_literals;
 void treat_trajectory_request(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> request,
           std::shared_ptr<example_interfaces::srv::AddTwoInts::Response>      response)
 {
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Waiting for request...");
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Waiting for request...");
   response->sum = request->a + request->b;
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Incoming request\na: %ld" " b: %ld",
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Incoming request\na: %ld" " b: %ld",
                 request->a, request->b);
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "sending back response: [%ld]", (long int)response->sum);
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "sending back response: [%ld]", (long int)response->sum);
 }
 
 /**
@@ -41,10 +41,10 @@ uint16_t notify_turtle_initial_position() {
 
   while (!client->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+      RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Interrupted while waiting for the service. Exiting.");
       return 0;
     }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "service not available, waiting again...");
   }
 
   auto result = client->async_send_request(request);
@@ -52,9 +52,9 @@ uint16_t notify_turtle_initial_position() {
   if (rclcpp::spin_until_future_complete(node, result) ==
     rclcpp::FutureReturnCode::SUCCESS)
   {
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Sum: %ld", result.get()->sum);
+    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Sum: %ld", result.get()->sum);
   } else {
-    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to call service add_two_ints");
+    RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Failed to call service add_two_ints");
   }
 
   return result.get()->sum;
@@ -64,7 +64,7 @@ uint16_t notify_turtle_initial_position() {
  * @description Inform manager that the trajectory is over
  * TODO: call actual service, this is a mock
  */
-bool notify_turtle_arrival() {
+bool notify_turtle_arrival(uint16_t turtle_id, UsineGoalPose::Result final_pose) {
   return true;
   // TODO test if node already exists before trying to create it
   std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("add_two_ints_client");
@@ -78,10 +78,10 @@ bool notify_turtle_arrival() {
 
   while (!client->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
-      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+      RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Interrupted while waiting for the service. Exiting.");
       return 0;
     }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "service not available, waiting again...");
   }
 
   auto result = client->async_send_request(request);
@@ -89,9 +89,9 @@ bool notify_turtle_arrival() {
   if (rclcpp::spin_until_future_complete(node, result) ==
     rclcpp::FutureReturnCode::SUCCESS)
   {
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Sum: %ld", result.get()->sum);
+    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Sum: %ld", result.get()->sum);
   } else {
-    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to call service add_two_ints");
+    RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Failed to call service add_two_ints");
   }
 
   return result.get()->sum;
@@ -106,10 +106,10 @@ void server(uint16_t turtle_id){
   rclcpp::Service<example_interfaces::srv::AddTwoInts>::SharedPtr service =
     node->create_service<example_interfaces::srv::AddTwoInts>("service_name", &treat_trajectory_request);
 
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Ready to perform a trajectory.");
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Ready to perform a trajectory.");
 
   rclcpp::spin(node);
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Shutdown server thread...");
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Shutdown server thread...");
   rclcpp::shutdown();
 }
 
@@ -129,17 +129,17 @@ bool summon_action(uint16_t turtle_id){
   "-r /$OLDNAME/_action/get_result:=/$NEWNAME/_action/get_result "
   "-r /$OLDNAME/_action/send_goal:=/$NEWNAME/_action/send_goal &";
 
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Command: %s", command.c_str());
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Command: %s", command.c_str());
   int returnCode = system(command.c_str());
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
   // checking if the command was executed successfully
   if (returnCode == 0) {
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Started navigation_server successfully");
+    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Started navigation_server successfully");
     return true;
   }
   else {
-    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Error starting navigation_server");
+    RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Error starting navigation_server");
     return false;
   }
 }
@@ -162,7 +162,7 @@ UsineGoalPose::Result call_action(uint16_t turtle_id, UsineGoalPose::Goal goal){
   "TURTLE_ID=" + std::to_string(turtle_id) + "; " +
   "ros2 run custom_action_cpp navigation_client 2>&1";
 
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Command: %s", command.c_str());
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Command: %s", command.c_str());
 
   std::array<char, 256> buffer;
     std::string result;
@@ -200,32 +200,31 @@ UsineGoalPose::Result call_action(uint16_t turtle_id, UsineGoalPose::Goal goal){
     ss << ", ";
     ss << final_pose.theta_final_pose;
     ss << ")";
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), ss.str().c_str());
+    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), ss.str().c_str());
   return final_pose;
 }
 
 void shutdown(std::thread &thread_server){
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Shutdown rclcpp...");
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Shutdown rclcpp...");
   rclcpp::shutdown();
   thread_server.join();
   // end action server
   system("pkill -n navigation_s");
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Exiting...");
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Exiting...");
 }
 
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
 
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Fetching turtle_id");
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Fetching turtle_id");
   const uint16_t turtle_id = notify_turtle_initial_position();
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "turtle_id = %d", turtle_id);
+  RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "turtle_id = %d", turtle_id);
 
   std::thread thread_server(server, turtle_id);
   // Wait for thread to come online. I could use a variable for this instead
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-  // TODO: call the action, copy code from navigation_client or call it from the shell too
   if(!summon_action(turtle_id)){
     shutdown(thread_server);
   };
@@ -238,7 +237,7 @@ int main(int argc, char **argv)
   UsineGoalPose::Result final_pose = call_action(turtle_id, goal_msg);
 
   // send sequest to manager
-  notify_turtle_arrival();
+  notify_turtle_arrival(turtle_id, final_pose);
 
   std::this_thread::sleep_for(std::chrono::seconds(3000));
   shutdown(thread_server);
