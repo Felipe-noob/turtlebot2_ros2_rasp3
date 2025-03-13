@@ -1,6 +1,9 @@
 #include "rclcpp/rclcpp.hpp"
 #include "example_interfaces/srv/add_two_ints.hpp"
 #include "custom_action_interfaces/action/usine_goal_pose.hpp"
+#include "turtle_interface/srv/turtle_move.hpp"
+#include "coordinator_interface/srv/notify_turtle_arrival.hpp"
+#include "coordinator_interface/srv/notify_turtle_initial_position.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -39,26 +42,27 @@ void treat_trajectory_request(const std::shared_ptr<example_interfaces::srv::Add
 /**
  * @description During the startup process, the turtlebot needs to get an id
  * from the coordinator. It will call a service from the coordinator
- * TODO: call actual service, this is a mock
  */
 uint16_t notify_turtle_initial_position() {
   return 3;
-  // TODO test if node already exists before trying to create it
-  std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("add_two_ints_client");
-  rclcpp::Client<example_interfaces::srv::AddTwoInts>::SharedPtr client =
-    node->create_client<example_interfaces::srv::AddTwoInts>("add_two_ints");
+  std::string node_name = "turtlebot_navigation_init";
 
-  // TODO NotifyTurtleInitialPosition
-  auto request = std::make_shared<example_interfaces::srv::AddTwoInts::Request>();
-  request->a = 0;
-  request->b = 0;
+  std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared(node_name.c_str());
+  rclcpp::Client<coordinator_interface::srv::NotifyTurtleInitialPosition>::SharedPtr client =
+    node->create_client<coordinator_interface::srv::NotifyTurtleInitialPosition>("get_turtle_id");
+    // TODO verify service name from André
+
+  auto request = std::make_shared<coordinator_interface::srv::NotifyTurtleInitialPosition::Request>();
+  request->turtle_position = 3; // TODO Read as argument from command line
+  request->x_turtle = 0; // TODO implement lookup table and enum
+  request->y_turtle = 0;// TODO implement lookup table and enum
 
   while (!client->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
-      RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Interrupted while waiting for the service. Exiting.");
+      RCLCPP_ERROR(rclcpp::get_logger(node_name.c_str()), "Interrupted while waiting for the service. Exiting.");
       return 0;
     }
-    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "service not available, waiting again...");
+    RCLCPP_INFO(rclcpp::get_logger(node_name.c_str()), "service not available, waiting again...");
   }
 
   auto result = client->async_send_request(request);
@@ -66,12 +70,12 @@ uint16_t notify_turtle_initial_position() {
   if (rclcpp::spin_until_future_complete(node, result) ==
     rclcpp::FutureReturnCode::SUCCESS)
   {
-    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Sum: %ld", result.get()->sum);
+    RCLCPP_INFO(rclcpp::get_logger(node_name.c_str()), "Sum: %ld", result.get()->turtle_id);
   } else {
-    RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Failed to call service add_two_ints");
+    RCLCPP_ERROR(rclcpp::get_logger(node_name.c_str()), "Failed to call service add_two_ints");
   }
 
-  return result.get()->sum;
+  return result.get()->turtle_id;
 }
 
 /**
