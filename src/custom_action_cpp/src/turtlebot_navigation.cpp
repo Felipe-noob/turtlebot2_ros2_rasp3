@@ -17,7 +17,6 @@ using namespace std::chrono_literals;
 std::mutex mutex_in_trajectory;
 
 auto goal_msg = UsineGoalPose::Goal();
-
 enum TurtlePosition_e {
   UNKNOWN,
   INPUT_SIDE1,
@@ -25,6 +24,7 @@ enum TurtlePosition_e {
   OUTPUT_SIDE1,
   OUTPUT_SIDE2
 };
+uint32_t goal_position_id = UNKNOWN;
 
 void treat_trajectory_request(const std::shared_ptr<turtle_interface::srv::TurtleMove::Request> request,
           std::shared_ptr<turtle_interface::srv::TurtleMove::Response>      response)
@@ -64,11 +64,9 @@ void treat_trajectory_request(const std::shared_ptr<turtle_interface::srv::Turtl
         break;
     }
     if(response->ack == 0){
-      if(!mutex_in_trajectory.try_lock()){
-        // The robot is already in a trajectory
-        // reject the demand
-        response->ack = 1; // TODO see André error codes
-      }
+      mutex_in_trajectory.unlock();
+      // If it's already in a trajectory, it will quietly ignore the new reference
+      // TODO: send error ACK if already in trajectory
     }
   RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "sending back response: [%ld]", (long int)response->ack);
 }
@@ -94,6 +92,8 @@ uint16_t notify_turtle_initial_position() {
     request->turtle_position = std::atoi(env_p);
   }
   RCLCPP_INFO(rclcpp::get_logger(node_name.c_str()), "Read initial position = %d", request->turtle_position);
+
+  goal_position_id = request->turtle_position;
   switch(request->turtle_position){
     case INPUT_SIDE1:
       request->x_turtle = 0;
@@ -153,7 +153,7 @@ uint32_t notify_turtle_arrival(uint16_t turtle_id, UsineGoalPose::Result final_p
 
   auto request = std::make_shared<coordinator_interface::srv::NotifyTurtleArrival::Request>();
   request->turtle_id = turtle_id;
-  request->turtle_position = 0; // TODO: implement LUT
+  request->turtle_position = goal_position_id;
   request->x_turtle = final_pose.x_final_pose;
   request->y_turtle = final_pose.y_final_pose;
 
@@ -170,7 +170,7 @@ uint32_t notify_turtle_arrival(uint16_t turtle_id, UsineGoalPose::Result final_p
   if (rclcpp::spin_until_future_complete(node, result) ==
     rclcpp::FutureReturnCode::SUCCESS)
   {
-    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Sum: %d", result.get()->ack);
+    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "ACK: %d", result.get()->ack);
   } else {
     RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Failed to call service add_two_ints");
   }
@@ -197,7 +197,7 @@ void server(uint16_t turtle_id){
 /**
  * Run the action server without blocking the main thread
  */
-bool summon_action(uint16_t turtle_id){
+void summon_action(uint16_t turtle_id){
   std::string new_action_name = "navigation_" + std::to_string(turtle_id);
   std::string new_node_name = "navigation_action_server_" + std::to_string(turtle_id);
 
@@ -212,16 +212,15 @@ bool summon_action(uint16_t turtle_id){
 
   RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Command: %s", command.c_str());
   int returnCode = system(command.c_str());
+  //Give it time to initialize
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
   // checking if the command was executed successfully
   if (returnCode == 0) {
     RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "Started navigation_server successfully");
-    return true;
-  }
-  else {
+  } else {
     RCLCPP_ERROR(rclcpp::get_logger("turtlebot_navigation_server"), "Error starting navigation_server");
-    return false;
+    throw std::runtime_error("summon_action failed");
   }
 }
 
@@ -307,12 +306,11 @@ int main(int argc, char **argv)
   // Wait for thread to come online. I could use a variable for this instead
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-  if(!summon_action(turtle_id)){
-    shutdown(thread_server);
-  };
+  summon_action(turtle_id);
 
   while(true){
     mutex_in_trajectory.lock();
+    RCLCPP_INFO(rclcpp::get_logger("turtlebot_navigation_server"), "locked mutex");
 
     // Demand trajectory to the robot
     UsineGoalPose::Result final_pose = call_action(turtle_id);
@@ -321,6 +319,5 @@ int main(int argc, char **argv)
     notify_turtle_arrival(turtle_id, final_pose);
   }
 
-  std::this_thread::sleep_for(std::chrono::seconds(3000));
   shutdown(thread_server);
 }
