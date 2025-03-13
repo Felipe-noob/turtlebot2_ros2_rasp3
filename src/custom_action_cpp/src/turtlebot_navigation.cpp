@@ -115,7 +115,20 @@ void server(uint16_t turtle_id){
  * Run the action server without blocking the main thread
  */
 bool summon_action(uint16_t turtle_id){
-  int returnCode = system("ros2 run custom_action_cpp navigation_server &");
+  std::string new_action_name = "navigation_" + std::to_string(turtle_id);
+  std::string new_node_name = "navigation_action_server_" + std::to_string(turtle_id);
+
+  std::string command = "OLDNAME=navigation NEWNAME=" + new_action_name + "; "
+  "ros2 run custom_action_cpp navigation_server --ros-args "
+  "-r __node:=" + new_node_name + " "
+  "-r /$OLDNAME/_action/feedback:=/$NEWNAME/_action/feedback "
+  "-r /$OLDNAME/_action/status:=/$NEWNAME/_action/status "
+  "-r /$OLDNAME/_action/cancel_goal:=/$NEWNAME/_action/cancel_goal "
+  "-r /$OLDNAME/_action/get_result:=/$NEWNAME/_action/get_result "
+  "-r /$OLDNAME/_action/send_goal:=/$NEWNAME/_action/send_goal &";
+
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Command: %s", command.c_str());
+  int returnCode = system(command.c_str());
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
   // checking if the command was executed successfully
