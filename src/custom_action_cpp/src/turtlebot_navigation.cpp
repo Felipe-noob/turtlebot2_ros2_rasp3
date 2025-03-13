@@ -33,7 +33,6 @@ void treat_trajectory_request(const std::shared_ptr<turtle_interface::srv::Turtl
                 request->turtle_id, request->turtle_position);
 
 
-    // TODO read position from lookup table
     response->ack=0; //TODO see code for OK
     switch(request->turtle_position){
       case INPUT_SIDE1:
@@ -79,7 +78,6 @@ void treat_trajectory_request(const std::shared_ptr<turtle_interface::srv::Turtl
  * from the coordinator. It will call a service from the coordinator
  */
 uint16_t notify_turtle_initial_position() {
-  return 3;
   std::string node_name = "turtlebot_navigation_init";
 
   std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared(node_name.c_str());
@@ -88,10 +86,40 @@ uint16_t notify_turtle_initial_position() {
     // TODO verify service name from André
 
   auto request = std::make_shared<coordinator_interface::srv::NotifyTurtleInitialPosition::Request>();
-  request->turtle_position = 3; // TODO Read as argument from command line
-  request->x_turtle = 0; // TODO implement lookup table and enum
-  request->y_turtle = 0;// TODO implement lookup table and enum
 
+  char* env_p = std::getenv("INITIAL_TURTLE_POSITION");
+  if(!env_p){
+    throw std::runtime_error("INITIAL_TURTLE_POSITION not defined");
+  } else {
+    request->turtle_position = std::atoi(env_p);
+  }
+  RCLCPP_INFO(rclcpp::get_logger(node_name.c_str()), "Read initial position = %d", request->turtle_position);
+  switch(request->turtle_position){
+    case INPUT_SIDE1:
+      request->x_turtle = 0;
+      request->y_turtle = 0.4;
+      break;
+      case INPUT_SIDE2:
+        request->x_turtle = 0;
+        request->y_turtle = -0.4;
+        break;
+      case OUTPUT_SIDE1:
+        request->x_turtle = 3.6;
+        request->y_turtle = 0.4;
+        break;
+      case OUTPUT_SIDE2:
+        request->x_turtle = 3.6;
+        request->y_turtle = -0.4;
+        break;
+      case UNKNOWN:
+      default:
+        request->x_turtle = 0;
+        request->y_turtle = 0;
+        throw std::runtime_error("INITIAL_TURTLE_POSITION not valid");
+        break;
+    }
+
+  return 3; //TODO verify service name and remove this return
   while (!client->wait_for_service(1s)) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(rclcpp::get_logger(node_name.c_str()), "Interrupted while waiting for the service. Exiting.");
