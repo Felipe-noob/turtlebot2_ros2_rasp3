@@ -122,6 +122,9 @@ struct CommandBlock{
     float x_ref;
     float y_ref;
 
+    float dx_ref;
+    float dy_ref;
+
     float x_head;
     float y_head;
 
@@ -134,8 +137,8 @@ struct CommandBlock{
 
 void update_CommandBlock(struct CommandBlock &bloque, float gain_K){
 
-    bloque.ux = gain_K * (bloque.x_ref - bloque.x_head) ;
-    bloque.uy = gain_K * (bloque.y_ref - bloque.y_head) ;
+    bloque.ux = gain_K * (bloque.x_ref - bloque.x_head) + bloque.dx_ref;
+    bloque.uy = gain_K * (bloque.y_ref - bloque.y_head) + bloque.dy_ref;
 }
 
 void update_integrator(struct IntegratorBlock &bloque, float dt){
@@ -262,11 +265,29 @@ int main(int argv, char *argc []){
 
     for(t = 0; t < 10; t = t + delta){
 
-        update_TrajectoryOutput(block_trajectory_X,t);
-        update_TrajectoryOutput(block_trajectory_Y,t);
+        t_current = t_current + delta; 
+
+        if(t > 5){
+
+            block_trajectory_X.t0 = 0;
+            block_trajectory_X.tf = 5;
+            block_trajectory_X.p0 = block_trajectory_X.pf;
+            block_trajectory_X.pf = 15;
+
+            block_trajectory_Y.t0 = 0;
+            block_trajectory_Y.tf = 5;
+            block_trajectory_Y.p0 = block_trajectory_Y.pf;
+            block_trajectory_Y.pf = 8;
+            
+        }
+
+        update_TrajectoryOutput(block_trajectory_X,t_current);
+        update_TrajectoryOutput(block_trajectory_Y,t_current);
 
         command_block.x_ref = block_trajectory_X.q;
         command_block.y_ref = block_trajectory_Y.q;
+        command_block.dx_ref = block_trajectory_X.dq;
+        command_block.dy_ref = block_trajectory_Y.dq;
 
         command_block.x_head = reference_change_block.x_head;
         command_block.y_head = reference_change_block.y_head;
@@ -311,7 +332,7 @@ int main(int argv, char *argc []){
 
         update_CoordsHead(reference_change_block,robot_paramaters);
 
-        std::cout << reference_change_block.x_head << " , " << reference_change_block.y_head << " , " << reference_change_block.theta_head << '\n';
+        std::cout << t_current << " , " << reference_change_block.x_head << " , " << reference_change_block.y_head << " , " << reference_change_block.theta_head << '\n';
 
 
     }
