@@ -7,14 +7,13 @@
 #include <iostream>
 #include <sstream>
 
-#include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
+#include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "custom_action_cpp/visibility_control.h"
-#include "std_msgs/msg/string.hpp"
-#include "rcl_interfaces/msg/log.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 
 using namespace std::chrono_literals;
 
@@ -43,20 +42,14 @@ public:
 
 
     // subscribe to odom
+    std::string node_name = "myrosout";
+
     subscription_ = this->create_subscription<rcl_interfaces::msg::Log>(
-      "myrosout", 10, std::bind(&NavigationActionServer::topic_callback, this, _1));
-      RCLCPP_INFO(this->get_logger(), "Listener on topic /topic"); // TODO print real node
+      node_name, 10, std::bind(&NavigationActionServer::topic_callback, this, _1));
+      RCLCPP_INFO(this->get_logger(), "Listener on topic /%s", node_name.c_str());
 
     // Publish to /cmd_vel
-     publisher_ = this->create_publisher<std_msgs::msg::String>("myrosout2", 10);
-    // auto timer_callback =
-    //   [this]() -> void {
-    //     auto message = std_msgs::msg::String();
-    //     message.data = "Hello, world! " + std::to_string(this->count_++);
-    //     RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
-    //     this->publisher_->publish(message);
-    //   };
-    // timer_ = this->create_wall_timer(500ms, timer_callback);
+     publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
 
     // Navigation Action
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
@@ -103,12 +96,19 @@ private:
 
   // Publisher
   rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
   size_t count_;
   void send_command(){
-    auto message = std_msgs::msg::String();
-    message.data = "Hello, world! " + std::to_string(this->count_++);
-    RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+    auto message = geometry_msgs::msg::Twist();
+    message.linear.x = 0;
+    message.linear.y = 0;
+    message.linear.z = 0;
+
+    message.angular.x = 0;
+    message.angular.y = 0;
+    message.angular.z = 0;
+
+    RCLCPP_INFO(this->get_logger(), "Publishing to cmd_vel");
     this->publisher_->publish(message);
   }
 

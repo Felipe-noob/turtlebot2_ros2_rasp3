@@ -21,6 +21,7 @@ find_package(rcl_interfaces REQUIRED)
 find_package(example_interfaces REQUIRED)
 find_package(turtle_interface REQUIRED)
 find_package(coordinator_interface REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 # SERVER
 add_library(action_server SHARED
@@ -35,8 +36,7 @@ ament_target_dependencies(action_server
   "rclcpp"
   "rclcpp_action"
   "rclcpp_components"
-  "std_msgs"
-  "rcl_interfaces"
+  "geometry_msgs"
   "turtle_interface"
   "coordinator_interface"
 )
