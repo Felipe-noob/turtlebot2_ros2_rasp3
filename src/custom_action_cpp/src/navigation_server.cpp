@@ -57,8 +57,8 @@ public:
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
                               std::shared_ptr<const UsineGoalPose::Goal> goal) {
       RCLCPP_INFO(this->get_logger(),
-                  "Received goal request with order [%d]",
-                  goal->goal_position);
+                  "Received goal request with order [%d -> %d]",
+                  goal->current_position, goal->goal_position);
       (void)uuid;
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     };

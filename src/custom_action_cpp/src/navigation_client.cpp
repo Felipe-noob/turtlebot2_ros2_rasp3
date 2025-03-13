@@ -36,7 +36,6 @@ public:
     this->client_ptr_ = rclcpp_action::create_client<UsineGoalPose>(
         this, "navigation_" + std::to_string(turtle_id));
 
-    // TODO get turtle_id from env
     auto timer_callback_lambda = [this]() { return this->send_goal(); };
     this->timer_ = this->create_wall_timer(std::chrono::milliseconds(500),
                                            timer_callback_lambda);
@@ -56,9 +55,14 @@ public:
 
     auto goal_msg = UsineGoalPose::Goal();
     goal_msg.goal_position = get_goal_env("GOAL_POSITION");
+    goal_msg.current_position = get_goal_env("CURRENT_POSITION");
 
     std::stringstream ss;
-    ss << "Sending goal: " << goal_msg.goal_position << std::endl;
+    ss << "Sending goal: [ ";
+    ss << goal_msg.current_position;
+    ss << " -> ";
+    ss << goal_msg.goal_position;
+    ss << " ]" << std::endl;
     RCLCPP_INFO(this->get_logger(), ss.str().c_str());
 
     auto send_goal_options =

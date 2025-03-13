@@ -24,6 +24,7 @@ enum TurtlePosition_e {
   OUTPUT_SIDE2
 };
 uint32_t goal_position_id = UNKNOWN;
+uint32_t current_position_id = UNKNOWN;
 
 void treat_trajectory_request(
     const std::shared_ptr<turtle_interface::srv::TurtleMove::Request> request,
@@ -72,6 +73,8 @@ uint16_t notify_turtle_initial_position() {
   }
   RCLCPP_INFO(rclcpp::get_logger(node_name.c_str()),
               "Read initial position = %d", request->turtle_position);
+
+  current_position_id = request->turtle_position;
 
   switch (request->turtle_position) {
   case INPUT_SIDE1:
@@ -141,6 +144,7 @@ uint32_t notify_turtle_arrival(uint16_t turtle_id,
       coordinator_interface::srv::NotifyTurtleArrival::Request>();
   request->turtle_id = turtle_id;
   request->turtle_position = goal_position_id;
+  current_position_id = goal_position_id;
   request->x_turtle = final_pose.x_final_pose;
   request->y_turtle = final_pose.y_final_pose;
 
@@ -241,6 +245,7 @@ UsineGoalPose::Result call_action(uint16_t turtle_id) {
 
   std::string command =
       "export GOAL_POSITION=" + std::to_string(goal_position_id) + " " +
+      "export CURRENT_POSITION=" + std::to_string(current_position_id) + " " +
       "TURTLE_ID=" + std::to_string(turtle_id) + "; " +
       "ros2 run custom_action_cpp navigation_client 2>&1";
 
