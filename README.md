@@ -4,7 +4,7 @@ There have been previous efforts to support Turtlebot2 (based on Yujin's Kobuki 
 
 The repository contains a dockerfile, three udev rules files, and two packages to run a Turtlebot2 using a Hokuyo URG-04 as the navigation sensor and an Intel RealSense as a depth camera.
 
-Additional navigation sensors may be added if requested, and pull requests are always appreciated.
+Sorry for the misleading title, but this project was not actually test on an Arm CPU (it should be able to run, though).
 
 ## Setup
 
@@ -51,6 +51,13 @@ If you want to interact with the Kobuki base without bringing up the full Turtle
 
 Note that for MacOS environment, you'll need to add the flag `--platform linux/amd64` for all docker commands to specify non-arm variant
 
+### Automatic trajectory control
+
+This section is not yet functional, but if you want to test it out, setup the kobuki base and in another terminal (preferably on the same robot computer, but any other on the same network should work) run:
+```console
+INITIAL_TURTLE_POSITION=2 ros2 run custom_action_cpp turtlebot_navigation_server
+```
+
 ## ROS2 node architecture
 
 One action is resposible for receiving a goal and calculating the intermediate points (assuming a flat work surface) and control feedback. It reads position data from a topic (#TODO) published by the robot (50 Hz), and publishes to cmd_vel.
@@ -71,4 +78,4 @@ ROS2 has a feature called "composition". This allowes multiple talkers, listener
 
 The Kinect camera is not yet tested. Ideally, this should be able to run on a Raspberry Pi 3 (1GiB, 16GiB).
 
-Compile all of this for the RaspberryPi. We had difficulties to the Docker build]process requires a lot of compute and memory resources that seem to be impossible with only 1 GiB of RAM. Cross compilation is complicated and would already add more auto-learning time to the project.
+Compile all of this for the RaspberryPi. We had difficulties to the Docker build process requires a lot of compute and memory resources that seem to be impossible with only 1 GiB of RAM. Cross compilation is complicated and would already add more auto-learning time to the project.
