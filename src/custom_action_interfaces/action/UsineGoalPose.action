@@ -1,6 +1,5 @@
-float32 x_goal_pose
-float32 y_goal_pose
-float32 theta_goal_pose
+int32 goal_position
+int32 current_position
 ---
 float32 x_final_pose
 float32 y_final_pose

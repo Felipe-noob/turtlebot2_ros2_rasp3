@@ -12,10 +12,12 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
+#include "control_system.hpp"
 #include "custom_action_cpp/visibility_control.h"
 #include "custom_action_interfaces/action/usine_goal_pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "navigation.hpp"
 
 using namespace std::chrono_literals;
 
@@ -55,8 +57,8 @@ public:
     auto handle_goal = [this](const rclcpp_action::GoalUUID &uuid,
                               std::shared_ptr<const UsineGoalPose::Goal> goal) {
       RCLCPP_INFO(this->get_logger(),
-                  "Received goal request with order [%f, %f, %f]",
-                  goal->x_goal_pose, goal->y_goal_pose, goal->theta_goal_pose);
+                  "Received goal request with order [%d -> %d]",
+                  goal->current_position, goal->goal_position);
       (void)uuid;
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     };
@@ -88,6 +90,7 @@ private:
   mutable std::mutex mutex_cycle;
 
   mutable geometry_msgs::msg::Point actual_pose = geometry_msgs::msg::Point();
+
   void topic_callback(const nav_msgs::msg::Odometry::SharedPtr msg) const {
     actual_pose.x = msg->pose.pose.position.x;
     actual_pose.y = msg->pose.pose.position.y;
@@ -129,11 +132,37 @@ private:
 
     auto feedback = std::make_shared<UsineGoalPose::Feedback>();
     auto result = std::make_shared<UsineGoalPose::Result>();
+    const auto wps = get_waypoints(goal->current_position, goal->goal_position);
+    const auto start = std::chrono::steady_clock::now();
 
     // TODO: stop condition
     // TODO: import command from Gabriel
-    for (int i = 1; (i < 10) && rclcpp::ok(); ++i) {
+    // Blocks definition
+    struct GenerationTrajectoireBlock block_trajectory_Y = {
+        .p0 = actual_pose.x,
+        .pf = 0,
+        .v0 = 0,
+        .vf = 0,
+        .t0 = 0,
+        .tf = 5, // we decide for each one
+        .q = 0,
+        .dq = 0};
+
+    struct GenerationTrajectoireBlock block_trajectory_X = {.p0 = actual_pose.y,
+                                                            .pf = 0,
+                                                            .v0 = 0,
+                                                            .vf = 0,
+                                                            .t0 = 0,
+                                                            .tf = 5,
+                                                            .q = 0,
+                                                            .dq = 0};
+
+    const double x_0 = actual_pose.x;
+    const double y_0 = actual_pose.y;
+
+    while (rclcpp::ok()) {
       mutex_cycle.lock();
+
       // Check if there is a cancel request
       if (goal_handle->is_canceling()) {
         result->x_final_pose = actual_pose.x;
@@ -144,19 +173,40 @@ private:
         return;
       }
 
+      // TODO: calculate command for next cycle
+      // waypoints
+      auto t_current = since(start).count();
+      int w_index = t_current / 10 > 5   ? 5
+                    : t_current / 10 < 0 ? 0
+                                         : t_current / 10;
+      const double x_wp = wps[w_index][0];
+      const double y_wp = wps[w_index][1];
+      const double x_wp_old = w_index < 0 ? x_0 : wps[w_index - 1][0];
+      const double y_wp_old = w_index < 0 ? y_0 : wps[w_index - 1][1];
+
+      // update trajctory parameters
+      block_trajectory_X.p0 = x_wp_old;
+      block_trajectory_X.pf = x_wp;
+      block_trajectory_Y.p0 = y_wp_old;
+      block_trajectory_Y.pf = y_wp;
+
+      block_trajectory_X.tf = 5;
+      block_trajectory_Y.tf = 5;
+
+      update_TrajectoryOutput(block_trajectory_X, t_current);
+      update_TrajectoryOutput(block_trajectory_Y, t_current);
+
       // Send command to motors
       send_command();
-
-      // TODO: calculate command for next cycle
 
       // Send action feedback
       feedback->x_current_pose = actual_pose.x;
       feedback->y_current_pose = actual_pose.y;
       feedback->theta_current_pose = actual_pose.z;
 
-      feedback->x_intermediate_goal_pose = 3;
-      feedback->y_intermediate_goal_pose = 3;
-      feedback->theta_intermediate_goal_pose = 3;
+      feedback->x_intermediate_goal_pose = x_wp;
+      feedback->y_intermediate_goal_pose = y_wp;
+      feedback->theta_intermediate_goal_pose = 3; // TODO: delete!
 
       feedback->x_speed = 3;
       feedback->y_speed = 3;
@@ -172,15 +222,15 @@ private:
 
       goal_handle->publish_feedback(feedback);
       RCLCPP_INFO(this->get_logger(), "Publish feedback");
-    }
 
-    // Check if goal is done
-    if (rclcpp::ok()) {
-      result->x_final_pose = 9;
-      result->y_final_pose = 8;
-      result->theta_final_pose = 7;
-      goal_handle->succeed(result);
-      RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+      // Check if goal is done
+      if (rclcpp::ok()) {
+        result->x_final_pose = 9;
+        result->y_final_pose = 8;
+        result->theta_final_pose = 7;
+        goal_handle->succeed(result);
+        RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+      }
     }
   };
 
