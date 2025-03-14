@@ -128,16 +128,41 @@ private:
   void execute(const std::shared_ptr<GoalHandleUsineGoalPose> goal_handle) {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(1);
-    const auto start = std::chrono::steady_clock::now();
     const auto goal = goal_handle->get_goal();
 
     auto feedback = std::make_shared<UsineGoalPose::Feedback>();
     auto result = std::make_shared<UsineGoalPose::Result>();
+    const auto wps = get_waypoints(goal->current_position, goal->goal_position);
+    const auto start = std::chrono::steady_clock::now();
 
     // TODO: stop condition
     // TODO: import command from Gabriel
-    for (int i = 1; (i < 10) && rclcpp::ok(); ++i) {
+    // Blocks definition
+    struct GenerationTrajectoireBlock block_trajectory_Y = {
+        .p0 = actual_pose.x,
+        .pf = 0,
+        .v0 = 0,
+        .vf = 0,
+        .t0 = 0,
+        .tf = 5, // we decide for each one
+        .q = 0,
+        .dq = 0};
+
+    struct GenerationTrajectoireBlock block_trajectory_X = {.p0 = actual_pose.y,
+                                                            .pf = 0,
+                                                            .v0 = 0,
+                                                            .vf = 0,
+                                                            .t0 = 0,
+                                                            .tf = 5,
+                                                            .q = 0,
+                                                            .dq = 0};
+
+    const double x_0 = actual_pose.x;
+    const double y_0 = actual_pose.y;
+
+    while (rclcpp::ok()) {
       mutex_cycle.lock();
+
       // Check if there is a cancel request
       if (goal_handle->is_canceling()) {
         result->x_final_pose = actual_pose.x;
@@ -149,37 +174,27 @@ private:
       }
 
       // TODO: calculate command for next cycle
-
-      auto wps = get_waypoints(goal->current_position, goal->goal_position);
-      double x_wp = 0;
-      double y_wp = 0;
-
-      // Blocks definition
-
-      for (const auto &wp : wps) {
-        x = wp[0];
-        y = wp[1];
-        struct GenerationTrajectoireBlock block_trajectory_Y = {
-            .p0 = actual_pose.x,
-            .pf = 5,
-            .v0 = 0,
-            .vf = 0,
-            .t0 = 0,
-            .tf = 5,
-            .q = 0,
-            .dq = 0};
-        struct GenerationTrajectoireBlock block_trajectory_X = {.p0 =,
-                                                                .pf = 10,
-                                                                .v0 = 0,
-                                                                .vf = 0,
-                                                                .t0 = 0,
-                                                                .tf = 5,
-                                                                .q = 0,
-                                                                .dq = 0};
-      }
-      // update_TrajectoryOutput(block_trajectory_X,t_current);
+      // waypoints
       auto t_current = since(start).count();
-      // update_TrajectoryOutput(block_trajectory_Y,t_current);
+      int w_index = t_current / 10 > 5   ? 5
+                    : t_current / 10 < 0 ? 0
+                                         : t_current / 10;
+      const double x_wp = wps[w_index][0];
+      const double y_wp = wps[w_index][1];
+      const double x_wp_old = w_index < 0 ? x_0 : wps[w_index - 1][0];
+      const double y_wp_old = w_index < 0 ? y_0 : wps[w_index - 1][1];
+
+      // update trajctory parameters
+      block_trajectory_X.p0 = x_wp_old;
+      block_trajectory_X.pf = x_wp;
+      block_trajectory_Y.p0 = y_wp_old;
+      block_trajectory_Y.pf = y_wp;
+
+      block_trajectory_X.tf = 5;
+      block_trajectory_Y.tf = 5;
+
+      update_TrajectoryOutput(block_trajectory_X, t_current);
+      update_TrajectoryOutput(block_trajectory_Y, t_current);
 
       // Send command to motors
       send_command();
@@ -207,15 +222,15 @@ private:
 
       goal_handle->publish_feedback(feedback);
       RCLCPP_INFO(this->get_logger(), "Publish feedback");
-    }
 
-    // Check if goal is done
-    if (rclcpp::ok()) {
-      result->x_final_pose = 9;
-      result->y_final_pose = 8;
-      result->theta_final_pose = 7;
-      goal_handle->succeed(result);
-      RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+      // Check if goal is done
+      if (rclcpp::ok()) {
+        result->x_final_pose = 9;
+        result->y_final_pose = 8;
+        result->theta_final_pose = 7;
+        goal_handle->succeed(result);
+        RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+      }
     }
   };
 
